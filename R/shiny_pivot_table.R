@@ -43,6 +43,8 @@ get_expr <- function(idc, target) {
 #' @examples
 #' \dontrun{\donttest{
 #'
+#' require(data.table)
+#'
 #' # create artificial dataset
 #' data <- data.table("V1" = sample(c("A", "B", "C", "D"), size = 1000000,
 #'                                  prob = runif(4, 0, 1), replace = T),
@@ -287,7 +289,7 @@ shinypivottabler <- function(input, output, session,
           fluidRow(
             column(3,
                    div(checkboxInput(ns(paste0("idc_name_box_", index)), label = "",
-                                     value = T), style = "margin-top: -12px; margin-bottom: -10px;"),
+                                     value = T), style = "margin-top: -12px; margin-bottom: -10px; margin-right: 2px;"),
             ),
             column(9,
                    div(textOutput(ns(paste0("idc_name_", index)), container = span), style = "margin-bottom: -10px; margin-left: -20%;")
