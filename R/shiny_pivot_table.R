@@ -79,7 +79,7 @@ get_expr <- function(idc, target) {
 #'                     id = "id",
 #'                     data = data,
 #'                     pivot_cols = c("V1", "V2", "V3", "V4"),
-#'                     theme = theme)
+#'                     theme = NULL)
 #' }
 #'
 #' shiny::shinyApp(ui = ui, server = server)
@@ -194,7 +194,7 @@ shinypivottabler <- function(input, output, session,
               ),
               column(4,
                      selectInput(ns("format_suffix"), label = "Suffix",
-                                 choices = c("Aucun" = " ", "%" = " %%"), selected = "", width = "100%")
+                                 choices = c("None" = " ", "%" = " %%"), selected = "", width = "100%")
               )
             ),
             easyClose = FALSE,
@@ -269,6 +269,7 @@ shinypivottabler <- function(input, output, session,
       }
     })
   })
+  
   output$selected_indicators <- renderUI({
     indicators <-  idcs()
 
@@ -309,64 +310,59 @@ shinypivottabler <- function(input, output, session,
     input$add_idc
 
     isolate({
-      updateTextInput(session = session, "label",
-                      value = "Auto")
+      updateTextInput(session = session, "label", value = "Auto")
     })
   })
 
-  observe({
+  observeEvent(input$reset_table, {
     cpt <- input$reset_table
-
-    isolate({
       if(! is.null(cpt) && cpt > 0) {
         idcs(list())
       }
-    })
-  })
+  }, ignoreInit = TRUE, ignoreNULL = TRUE)
 
-  store_pt <- reactiveVal(NULL)
-  output$pivottable <- renderPivottabler({
+  store_pt <- reactive({
     cpt <- input$go_table
     input$reset_table
-
     isolate({
-      idcs <- idcs()
-      data <- get_data()
 
+      idcs <- isolate(idcs())
+      data <- isolate(get_data())
+      
       if (! is.null(cpt) && cpt > 0 && ! is.null(idcs) && length(idcs) > 0 && ! is.null(data)) {
         shiny::withProgress(message = 'Creation of the table', value = 0.5, {
-
-          input$reset_table
+          
           pt <- PivotTable$new()
           pt$addData(data)
-
+          
           # rows and columns
           for (col in input$cols) {
-            if (col != "") {pt$addColumnDataGroups(col)}
+            if (!is.null(col) && col != "") {pt$addColumnDataGroups(col)}
           }
-
+          
           for (row in input$rows) {
-            if (row != "") {pt$addRowDataGroups(row)}
+            if (!is.null(row) && row != "") {pt$addRowDataGroups(row)}
           }
-
+          
           for (index in 1:length(idcs)) {
-            if (input[[paste0("idc_name_box_", index)]]) {
-
+            tmp <- isolate(input[[paste0("idc_name_box_", index)]])
+            if (!is.null(tmp) && tmp) {
+              
               label <- idcs[[index]][["label"]]
               target <- gsub(" ", "_", idcs[[index]]["target"])
               idc <- gsub(" ", "_", idcs[[index]][["idc"]])
               format <- idcs[[index]][["format"]]
-
+              
               combine <- if ("combine" %in% names(idcs[[index]])) {gsub(" ", "_", idcs[[index]]["combine"])} else {NULL}
               combine_target <- if ("combine_target" %in% names(idcs[[index]])) {gsub(" ", "_", idcs[[index]]["combine_target"])} else {NULL}
               combine_idc <- if ("combine_target" %in% names(idcs[[index]])) {gsub(" ", "_", idcs[[index]][["combine_idc"]])} else {NULL}
-
+              
               pt$defineCalculation(calculationName = paste0(target, "_", tolower(idc), "_", index),
                                    caption = label,
                                    summariseExpression = get_expr(idc, target),
                                    format = ifelse(format == "None", format, "%.2f"),
                                    visible = ifelse(is.null(combine_target), T, F))
-
+              
               if (! is.null(combine_target) && combine_target != "") {
                 pt$defineCalculation(calculationName = paste0(combine_target, "_", tolower(combine_idc), "_combine_", index),
                                      summariseExpression = get_expr(combine_idc, combine_target),
@@ -381,8 +377,8 @@ shinypivottabler <- function(input, output, session,
               }
             }
           }
-
-          if (is.null(get_theme())) {
+          
+          if (is.null(isolate(get_theme()))) {
             theme <- list(
               fontName="Courier New, Courier",
               fontSize="1.5em",
@@ -396,21 +392,29 @@ shinypivottabler <- function(input, output, session,
               totalColor = "rgb(0, 0, 0)",
               borderColor = "rgb(64, 64, 64)")
           } else {
-            theme <- get_theme()
+            theme <- isolate(get_theme())
           }
-
+          
           pt$theme <- theme
-
+          
           pt$evaluatePivot()
-          store_pt(pt)
-          pivottabler(pt, width = "100%", height = "100%")
+          pt
         })
+      } else {
+        NULL
       }
     })
   })
+  
+  output$pivottable <- renderPivottabler({
+    store_pt <- store_pt()
+    if(!is.null(store_pt)){
+      pivottabler(store_pt, width = "100%", height = "100%")
+    }
+  })
 
   output$is_pivottable <- reactive({
-    ! is.null(idcs()) && length(idcs()) > 0 && ! is.null(input$go_table) && input$go_table > 0
+    ! is.null(store_pt())
   })
   outputOptions(output, "is_pivottable", suspendWhenHidden = FALSE)
 
@@ -534,7 +538,7 @@ shinypivottablerUI <- function(id) {
                                     div(hr(style = "border: 1px solid #59bb28;"), style = "margin-top: -10px;"),
 
                                     fluidRow(
-                                      column(1,
+                                      column(2,
                                              div(id = "id_padding_1", textInput(ns("label"), label = "Label", value = "Auto", width  = "100%"))
                                       ),
                                       column(4,
@@ -576,7 +580,7 @@ shinypivottablerUI <- function(id) {
                                                               )
                                              )
                                       ),
-                                      column(1,
+                                      column(2,
                                              div(id = "id_padding_2", selectInput(ns("combine"), label = "Combine",
                                                                                   choices = c("None" = "None",
                                                                                               "Add" = "+",
@@ -588,8 +592,8 @@ shinypivottablerUI <- function(id) {
                                       column(2,
                                              div(id = "id_padding_3", actionButton(ns("specify_format"), label = "Specify format", width = "100%"), style = "margin-top: 25px")
                                       ),
-                                      column(4,
-                                             div(id = "id_padding_4", actionButton(ns("add_idc"), label = "Add indicator", width = "75%"), align = "center", style = "margin-top: 25px")
+                                      column(2,
+                                             div(id = "id_padding_4", actionButton(ns("add_idc"), label = "Add indicator", width = "100%"), align = "center", style = "margin-top: 25px")
                                       ),
                                     )
                            )
