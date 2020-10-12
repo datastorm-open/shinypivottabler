@@ -1,0 +1,21 @@
+Package: shinypivottable
+Title: Shiny pivot tables
+Version: 0.1.0.0
+Authors@R: 
+    person(given = "Datastorm",
+           family = "Datastorm",
+           role = c("aut", "cre"),
+           email = "datastorm@datastorm.fr",
+           comment = c())
+Description: Shiny module to create and export Excel-like pivot table.
+License: GPL-3 
+Encoding: UTF-8
+Depends: R (>= 3.4)
+LazyData: true
+RoxygenNote: 7.1.1
+Imports: 
+    pivottabler,
+    shiny,
+    shinyjs,
+    openxlsx,
+    shinyBS
