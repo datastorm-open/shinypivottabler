@@ -1,0 +1,21 @@
+/* bsPopover */
+.sbs-alert-hover {
+  position: absolute;
+  z-index: 1000;
+  width: 30%;
+  margin-left: 35%;
+  margin-top: 10px;
+  opacity: 0.7;
+}
+
+.sbs-alert-hover:hover {
+  opacity: 1.0;
+}
+
+/* css center html tables */
+.Table {
+          display: table;
+          border-collapse: collapse;
+          margin-left: auto;
+          margin-right: auto;
+      }

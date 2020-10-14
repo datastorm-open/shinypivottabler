@@ -9,11 +9,11 @@ get_expr <- function(idc, target) {
   text_idc <- list(
     "Count" = "'n()'",
     "Count_distinct" = "paste0('n_distinct(', target, ', na.rm = TRUE)')",
-    "Sum" = "paste0('sum(', target, ', na.rm = TRUE)')",
-    "Mean" = "paste0('mean(', target, ', na.rm = TRUE)')",
-    "Min" = "paste0('min(', target, ', na.rm = TRUE)')",
-    "Max" = "paste0('max(', target, ', na.rm = TRUE)')",
-    "Standard_deviation" = "paste0('sd(', target, ', na.rm = TRUE)')"
+    "Sum" = "paste0(as.numeric('sum(', target, ', na.rm = TRUE)')",
+    "Mean" = "paste0('mean(as.numeric(', target, '), na.rm = TRUE)')",
+    "Min" = "paste0('min(as.numeric(', target, '), na.rm = TRUE)')",
+    "Max" = "paste0('max(as.numeric(', target, '), na.rm = TRUE)')",
+    "Standard_deviation" = "paste0('sd(as.numeric(', target, '), na.rm = TRUE)')"
   )
 
   return(eval(parse(text = text_idc[[idc]])))
@@ -39,7 +39,7 @@ get_expr <- function(idc, target) {
 #'
 #' @return Nothing. Starts a Shiny module.
 #'
-#' @import pivottabler shiny openxlsx shinyBS
+#' @import pivottabler shiny openxlsx
 #' @importFrom colourpicker colourInput
 #'
 #' @export
@@ -109,15 +109,15 @@ shinypivottabler <- function(input, output, session,
   })
   observe({
     if (! is.null(input$combine) && input$combine != "None") {
-      toggleBtnSPivot(session = session, inputId = ns("id_padding_1"), type = "combine")
-      toggleBtnSPivot(session = session, inputId = ns("id_padding_2"), type = "combine")
-      toggleBtnSPivot(session = session, inputId = ns("id_padding_3"), type = "combine")
-      toggleBtnSPivot(session = session, inputId = ns("id_padding_4"), type = "combine")
+      combine_padding(session = session, inputId = ns("id_padding_1"), type = "combine")
+      combine_padding(session = session, inputId = ns("id_padding_2"), type = "combine")
+      combine_padding(session = session, inputId = ns("id_padding_3"), type = "combine")
+      combine_padding(session = session, inputId = ns("id_padding_4"), type = "combine")
     } else {
-      toggleBtnSPivot(session = session, inputId = ns("id_padding_1"), type = "regular")
-      toggleBtnSPivot(session = session, inputId = ns("id_padding_2"), type = "regular")
-      toggleBtnSPivot(session = session, inputId = ns("id_padding_3"), type = "regular")
-      toggleBtnSPivot(session = session, inputId = ns("id_padding_4"), type = "regular")
+      combine_padding(session = session, inputId = ns("id_padding_1"), type = "regular")
+      combine_padding(session = session, inputId = ns("id_padding_2"), type = "regular")
+      combine_padding(session = session, inputId = ns("id_padding_3"), type = "regular")
+      combine_padding(session = session, inputId = ns("id_padding_4"), type = "regular")
     }
   })
 
@@ -236,7 +236,7 @@ shinypivottabler <- function(input, output, session,
     target <- input$target
 
     isolate({
-      if (is.numeric(get_data()[[target]])) {
+      if (is.null(get_data()[[target]]) || is.numeric(get_data()[[target]])) {
         updateSelectInput(session = session, "idc",
                           choices = c("Count",
                                       "Count distinct",
@@ -280,7 +280,7 @@ shinypivottabler <- function(input, output, session,
 
     isolate({
       if (! is.null(combine_target) && combine_target != "") {
-        if (is.numeric(get_data()[[combine_target]])) {
+        if (is.null(get_data()[[combine_target]]) || is.numeric(get_data()[[combine_target]])) {
           updateSelectInput(session = session, "combine_idc",
                             choices = c("Count",
                                         "Count distinct",
@@ -457,11 +457,11 @@ shinypivottabler <- function(input, output, session,
             column(9,
                    div(textOutput(ns(paste0("idc_name_", index)), container = span), style = "margin-bottom: -10px; margin-left: -20%;")
             ),
-            shinyBS::bsPopover(id = ns(paste0("idc_name_", index)),
-                               title = paste0("<b>", indicators[[index]][["label"]], "</b>"),
-                               content = popup,
-                               placement = "bottom",
-                               options = list(container = "body"))
+            extract_bsPopover(id = ns(paste0("idc_name_", index)),
+                              title = paste0("<b>", indicators[[index]][["label"]], "</b>"),
+                              content = popup,
+                              placement = "bottom",
+                              options = list(container = "body"))
           )
         })
       }
@@ -739,25 +739,15 @@ shinypivottablerUI <- function(id,
 
     # tags
     singleton(tags$head(
-      tags$script(src = "shiny_pivot_table/button_freeze.js")
+      tags$script(src = "shiny_pivot_table/shinypivottable.js")
     )),
     singleton(tags$head(
-      tags$script(src = "shiny_pivot_table/combine_padding.js")
+      tags$link(rel = "stylesheet", type = "text/css", href = "shiny_pivot_table/shinypivottable.css")
     )),
     tags$head(
       tags$style(HTML("
         div.combine_padding { padding-top: 35px; }
         "))),
-    tags$head(
-      tags$style(HTML("
-      .Table {
-          display: table;
-          border-collapse: collapse;
-          margin-left: auto;
-          margin-right: auto;
-      }
-    "))
-    ),
     tags$head(
       tags$style(HTML(paste0("
         ul {
@@ -827,14 +817,7 @@ shinypivottablerUI <- function(id,
                                                ),
                                                column(6,
                                                       selectInput(ns("idc"), label = "Selected indicator",
-                                                                  choices = c("Count",
-                                                                              "Count distinct",
-                                                                              "Sum",
-                                                                              "Mean",
-                                                                              "Min",
-                                                                              "Max",
-                                                                              "Standard deviation"),
-                                                                  selected = "Count", width = "100%")
+                                                                  choices = NULL, width = "100%")
                                                )
                                              ),
                                              conditionalPanel(condition = paste0("input['", ns("combine"), "'] !== 'None'"),
@@ -845,14 +828,7 @@ shinypivottablerUI <- function(id,
                                                                 ),
                                                                 column(6,
                                                                        selectInput(ns("combine_idc"), label = "Selected indicator",
-                                                                                   choices = c("Count",
-                                                                                               "Count distinct",
-                                                                                               "Sum",
-                                                                                               "Mean",
-                                                                                               "Min",
-                                                                                               "Max",
-                                                                                               "Standard deviation"),
-                                                                                   selected = "Count", width = "100%")
+                                                                                   NULL, width = "100%")
                                                                 )
                                                               )
                                              )

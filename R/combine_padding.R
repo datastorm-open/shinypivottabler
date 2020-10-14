@@ -5,7 +5,7 @@
 #' @param type 'regular' or 'combine'.
 #'
 #' @noRd
-toggleBtnSPivot <- function(session, inputId, type = "regular") {
+combine_padding <- function(session, inputId, type = "regular") {
   session$sendCustomMessage(
     type = "method_combine_padding",
     message = list(inputId = inputId, type = type)

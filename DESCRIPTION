@@ -17,5 +17,5 @@ Imports:
     pivottabler,
     shiny,
     openxlsx,
-    shinyBS,
-    colourpicker
+    colourpicker,
+    htmltools
