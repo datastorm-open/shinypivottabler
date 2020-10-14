@@ -16,6 +16,6 @@ RoxygenNote: 7.1.1
 Imports: 
     pivottabler,
     shiny,
-    shinyjs,
     openxlsx,
-    shinyBS
+    shinyBS,
+    colourpicker

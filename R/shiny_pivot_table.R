@@ -5,6 +5,7 @@
 
 
 get_expr <- function(idc, target) {
+
   text_idc <- list(
     "Count" = "'n()'",
     "Count_distinct" = "paste0('n_distinct(', target, ', na.rm = TRUE)')",
@@ -31,11 +32,15 @@ get_expr <- function(idc, target) {
 #' @param indicator_cols \code{character} (NULL). Columns on which indicators will be calculated.
 #' @param theme \code{list} (NULL). Theme to customize the output of the pivot table.
 #' @param export_styles \code{boolean} (TRUE). Whether or not to apply styles (like the theme) when exporting to Excel.
+#' @param app_colors \code{character} (c("#59bb28", "#217346")). Colors of the app elements.
+#' @param app_linewidth \code{character} (10). Width of the borders of the two main boxes.
+#' @param show_title \code{boolean} (TRUE). Whether or not to display the app title.
 #' Some styles may not be supported by Excel.
 #'
 #' @return Nothing. Starts a Shiny module.
 #'
-#' @import pivottabler shiny shinyjs openxlsx shinyBS
+#' @import pivottabler shiny openxlsx shinyBS
+#' @importFrom colourpicker colourInput
 #'
 #' @export
 #' @rdname shiny_pivot_table
@@ -90,21 +95,29 @@ shinypivottabler <- function(input, output, session,
                              pivot_cols = NULL,
                              indicator_cols = NULL,
                              theme = NULL,
-                             export_styles = TRUE) {
+                             export_styles = TRUE,
+                             show_title = TRUE) {
 
   ns <- session$ns
 
-  observeEvent(input$combine, {
-    if (! is.null(input$combine) && input$combine != "None") {
-      shinyjs::addClass("id_padding_1", "combine_padding")
-      shinyjs::addClass("id_padding_2", "combine_padding")
-      shinyjs::addClass("id_padding_3", "combine_padding")
-      shinyjs::addClass("id_padding_4", "combine_padding")
+  observe({
+    if (! is.null(idcs()) && length(idcs()) > 0) {
+      toggleBtnSPivot(session = session, inputId = ns("go_table"), type = "enable")
     } else {
-      shinyjs::removeClass("id_padding_1", "combine_padding")
-      shinyjs::removeClass("id_padding_2", "combine_padding")
-      shinyjs::removeClass("id_padding_3", "combine_padding")
-      shinyjs::removeClass("id_padding_4", "combine_padding")
+      toggleBtnSPivot(session = session, inputId = ns("go_table"), type = "disable")
+    }
+  })
+  observe({
+    if (! is.null(input$combine) && input$combine != "None") {
+      toggleBtnSPivot(session = session, inputId = ns("id_padding_1"), type = "combine")
+      toggleBtnSPivot(session = session, inputId = ns("id_padding_2"), type = "combine")
+      toggleBtnSPivot(session = session, inputId = ns("id_padding_3"), type = "combine")
+      toggleBtnSPivot(session = session, inputId = ns("id_padding_4"), type = "combine")
+    } else {
+      toggleBtnSPivot(session = session, inputId = ns("id_padding_1"), type = "regular")
+      toggleBtnSPivot(session = session, inputId = ns("id_padding_2"), type = "regular")
+      toggleBtnSPivot(session = session, inputId = ns("id_padding_3"), type = "regular")
+      toggleBtnSPivot(session = session, inputId = ns("id_padding_4"), type = "regular")
     }
   })
 
@@ -128,9 +141,39 @@ shinypivottabler <- function(input, output, session,
   }
 
   if (! shiny::is.reactive(theme)) {
-    get_theme <- shiny::reactive(theme)
+    if (is.null(theme)) {
+      get_theme <- reactiveVal(list(
+        fontName="Courier New, Courier",
+        fontSize="1.5em",
+        headerBackgroundColor = "#217346",
+        headerColor = "rgb(255, 255, 255)",
+        cellBackgroundColor = "rgb(255, 255, 255)",
+        cellColor = "rgb(0, 0, 0)",
+        outlineCellBackgroundColor = "rgb(192, 192, 192)",
+        outlineCellColor = "rgb(0, 0, 0)",
+        totalBackgroundColor = "#59bb28",
+        totalColor = "rgb(0, 0, 0)",
+        borderColor = "rgb(64, 64, 64)"))
+    } else {
+      get_theme <- reactiveVal(theme)
+    }
   } else {
-    get_theme <- theme
+    if (is.null(theme())) {
+      get_theme <- reactiveVal(list(
+        fontName="Courier New, Courier",
+        fontSize="1.5em",
+        headerBackgroundColor = "#217346",
+        headerColor = "rgb(255, 255, 255)",
+        cellBackgroundColor = "rgb(255, 255, 255)",
+        cellColor = "rgb(0, 0, 0)",
+        outlineCellBackgroundColor = "rgb(192, 192, 192)",
+        outlineCellColor = "rgb(0, 0, 0)",
+        totalBackgroundColor = "#59bb28",
+        totalColor = "rgb(0, 0, 0)",
+        borderColor = "rgb(64, 64, 64)"))
+    } else {
+      get_theme <- reactiveVal(theme())
+    }
   }
 
   if (! shiny::is.reactive(export_styles)) {
@@ -138,6 +181,17 @@ shinypivottabler <- function(input, output, session,
   } else {
     get_export_styles <- export_styles
   }
+
+  if (! shiny::is.reactive(show_title)) {
+    get_show_title <- shiny::reactive(show_title)
+  } else {
+    get_show_title <- show_title
+  }
+
+  output$show_title <- reactive({
+    get_show_title()
+  })
+  outputOptions(output, "show_title", suspendWhenHidden = FALSE)
 
   # update inputs
   observe({
@@ -168,7 +222,7 @@ shinypivottabler <- function(input, output, session,
     isolate({
       if (is.null(indicator_cols)) {
         updateSelectInput(session = session, "target",
-                          choices = c("", names(which(sapply(get_data(), is.numeric)))),
+                          choices = c("", names(which(sapply(get_data(), function(x) is.numeric(x) || is.character(x) || is.factor(x))))),
                           selected = "")
       } else {
         updateSelectInput(session = session, "target",
@@ -178,7 +232,79 @@ shinypivottabler <- function(input, output, session,
     })
   })
 
-  format <- reactiveVal("%.2f")
+  observe({
+    target <- input$target
+
+    isolate({
+      if (is.numeric(get_data()[[target]])) {
+        updateSelectInput(session = session, "idc",
+                          choices = c("Count",
+                                      "Count distinct",
+                                      "Sum",
+                                      "Mean",
+                                      "Min",
+                                      "Max",
+                                      "Standard deviation"),
+                          selected = "Count")
+      } else if (is.character(get_data()[[target]]) || is.factor(get_data()[[target]])) {
+        updateSelectInput(session = session, "idc",
+                          choices = c("Count",
+                                      "Count distinct"),
+                          selected = "Count")
+      }
+    })
+  })
+  observe({
+    combine <- input$combine
+
+    isolate({
+      indicator_cols <- get_indicator_cols()
+
+      if (! is.null(combine) && combine != "None") {
+        if (is.null(input$combine_target) || input$combine_target == "") {
+          if (is.null(indicator_cols)) {
+            updateSelectInput(session = session, "combine_target",
+                              choices = c("", names(which(sapply(get_data(), function(x) is.numeric(x) || is.character(x) || is.factor(x))))),
+                              selected = "")
+          } else {
+            updateSelectInput(session = session, "combine_target",
+                              choices = c("", indicator_cols),
+                              selected = "")
+          }
+        }
+      }
+    })
+  })
+  observe({
+    combine_target <- input$combine_target
+
+    isolate({
+      if (! is.null(combine_target) && combine_target != "") {
+        if (is.numeric(get_data()[[combine_target]])) {
+          updateSelectInput(session = session, "combine_idc",
+                            choices = c("Count",
+                                        "Count distinct",
+                                        "Sum",
+                                        "Mean",
+                                        "Min",
+                                        "Max",
+                                        "Standard deviation"),
+                            selected = input$combine_idc)
+        } else if (is.character(get_data()[[combine_target]]) || is.factor(get_data()[[combine_target]])) {
+          updateSelectInput(session = session, "combine_idc",
+                            choices = c("Count",
+                                        "Count distinct"),
+                            selected = input$combine_idc)
+        }
+      }
+    })
+  })
+
+  store_format <- reactiveValues("format_digit" = 2,
+                                 "format_prefix" = "",
+                                 "format_suffix" = "",
+                                 "format_sep_thousands" = "None")
+
   observe({
     cpt <- input$specify_format
 
@@ -190,11 +316,21 @@ shinypivottabler <- function(input, output, session,
             fluidRow(
               column(4,
                      numericInput(ns("format_digit"), label = "Nb. digits",
-                                  min = 0, max = Inf, value = 2, step = 1, width = "100%")
+                                  min = 0, max = Inf, value = store_format[["format_digit"]], step = 1, width = "100%")
               ),
               column(4,
-                     selectInput(ns("format_suffix"), label = "Suffix",
-                                 choices = c("None" = " ", "%" = " %%"), selected = "", width = "100%")
+                     textInput(ns("format_prefix"), label = "Prefix",
+                               value = store_format[["format_prefix"]], width = "100%")
+              ),
+              column(4,
+                     textInput(ns("format_suffix"), label = "Suffix",
+                               value = store_format[["format_suffix"]], width = "100%")
+              )
+            ),
+            fluidRow(
+              column(4,
+                     selectInput(ns("format_sep_thousands"), label = "Thousands sep.",
+                                 choices = c("None", "Space" = " ", ","), selected = store_format[["format_sep_thousands"]], width = "100%")
               )
             ),
             easyClose = FALSE,
@@ -216,10 +352,23 @@ shinypivottabler <- function(input, output, session,
     cpt_cancel <- input$format_cancel
 
     isolate({
-      if (! is.null(cpt_valid) && ! is.null(cpt_cancel) && (cpt_valid > 0 || cpt_cancel > 0)) {
-        if (cpt_valid > 0) {
-          format(paste0("%.", input$format_digit, "f", input$format_suffix))
-        }
+      if (! is.null(cpt_valid) && cpt_valid > 0) {
+        store_format$format_digit <- input$format_digit
+        store_format$format_prefix <- input$format_prefix
+        store_format$format_suffix <- input$format_suffix
+        store_format$format_sep_thousands <- input$format_sep_thousands
+
+        shiny::removeModal()
+      }
+      if (! is.null(cpt_cancel) && cpt_cancel > 0) {
+        updateNumericInput(session = session, "format_digit",
+                           value = store_format[["format_digit"]])
+        updateTextInput(session = session, "format_prefix",
+                        value = store_format[["format_digit"]])
+        updateTextInput(session = session, "format_suffix",
+                        value = store_format[["format_suffix"]])
+        updateSelectInput(session = session, "format_sep_thousands",
+                          selected = store_format[["format_sep_thousands"]])
 
         shiny::removeModal()
       }
@@ -239,19 +388,28 @@ shinypivottabler <- function(input, output, session,
     isolate({
       if (! is.null(cpt) && cpt > 0 && ! is.null(input$target) && input$target != "" &&
           (! is.null(input$combine) && input$combine == "None" || (! is.null(input$combine_target) && input$combine_target != ""))) {
+
         if (input$combine == "None") {
           label = ifelse(input$label %in% c("Auto", ""),
                          paste0(input$target, "_", input$idc),
                          input$label)
 
           idcs(c(idcs(), list(c("label" = label,
-                                "target" = input$target, "idc" = input$idc, "format" = format()))))
+                                "target" = input$target, "idc" = input$idc,
+                                "nb_decimals" = input$format_digit,
+                                "sep_thousands" = input$format_sep_thousands,
+                                "prefix" = input$format_prefix,
+                                "suffix" = input$format_suffix))))
         } else {
           label = ifelse(input$label %in% c("Auto", ""),
                          paste0(input$target, "_", input$idc, " ", input$combine, " ", input$combine_target, "_", input$combine_idc),
                          input$label)
           idcs(c(idcs(), list(c("label" = label,
-                                "target" = input$target, "idc" = input$idc, "format" = format(),
+                                "target" = input$target, "idc" = input$idc,
+                                "nb_decimals" = input$format_digit,
+                                "sep_thousands" = input$format_sep_thousands,
+                                "prefix" = input$format_prefix,
+                                "suffix" = input$format_suffix,
                                 "combine" = input$combine, "combine_target" = input$combine_target, "combine_idc" = input$combine_idc))))
         }
       }
@@ -269,15 +427,16 @@ shinypivottabler <- function(input, output, session,
       }
     })
   })
-  
+
   output$selected_indicators <- renderUI({
-    indicators <-  idcs()
+    indicators <- idcs()
 
     isolate({
       if (! is.null(indicators) && length(indicators) > 0) {
-        (lapply(1:length(indicators), function(index) {
+
+        lapply(1:length(indicators), function(index) {
           popup <- paste0("<b> Target : </b>", indicators[[index]][["target"]],
-                          "<br> <b>Indicator : </b>", tolower(indicators[[index]][["idc"]]),
+                          "<br><b> Indicator : </b>", tolower(indicators[[index]][["idc"]]),
                           if (! "combine" %in% names(indicators[[index]])) {
                             ""
                           } else {
@@ -285,12 +444,15 @@ shinypivottabler <- function(input, output, session,
                                    "<br><b> Target 2 : </b>", indicators[[index]][["combine_target"]],
                                    "<br><b> Indicator 2 : </b>", tolower(indicators[[index]][["combine_idc"]]))
                           },
-                          "<br><b> Format : </b>", indicators[[index]][["format"]])
+                          "<br><b> Nb. decimal : </b>", ifelse("nb_decimals" %in% names(indicators[[index]]), indicators[[index]][["nb_decimals"]], 2),
+                          "<br><b> Thousands sep : </b>", ifelse("sep_thousands" %in% names(indicators[[index]]), indicators[[index]][["sep_thousands"]], 2),
+                          "<br><b> Prefix sep : </b>", ifelse("prefix" %in% names(indicators[[index]]), indicators[[index]][["prefix"]], ""),
+                          "<br><b> Suffix sep : </b>", ifelse("suffix" %in% names(indicators[[index]]), indicators[[index]][["suffix"]], ""))
 
           fluidRow(
             column(3,
                    div(checkboxInput(ns(paste0("idc_name_box_", index)), label = "",
-                                     value = T), style = "margin-top: -12px; margin-bottom: -10px; margin-right: 2px;"),
+                                     value = ifelse(length(idcs()) < index + 1, T, input[[paste0("idc_name_box_", index)]])), style = "margin-top: -12px; margin-bottom: -10px; margin-left: 2px;"),
             ),
             column(9,
                    div(textOutput(ns(paste0("idc_name_", index)), container = span), style = "margin-bottom: -10px; margin-left: -20%;")
@@ -301,7 +463,7 @@ shinypivottabler <- function(input, output, session,
                                placement = "bottom",
                                options = list(container = "body"))
           )
-        }))
+        })
       }
     })
   })
@@ -316,101 +478,209 @@ shinypivottabler <- function(input, output, session,
 
   observeEvent(input$reset_table, {
     cpt <- input$reset_table
-      if(! is.null(cpt) && cpt > 0) {
+
+    isolate({
+      if (! is.null(cpt) && cpt > 0) {
         idcs(list())
+        store_pt(NULL)
       }
+    })
   }, ignoreInit = TRUE, ignoreNULL = TRUE)
 
-  store_pt <- reactive({
+  store_pt <- reactiveVal(NULL)
+  observe({
     cpt <- input$go_table
-    input$reset_table
-    isolate({
 
+    isolate({
       idcs <- isolate(idcs())
       data <- isolate(get_data())
-      
+
       if (! is.null(cpt) && cpt > 0 && ! is.null(idcs) && length(idcs) > 0 && ! is.null(data)) {
-        shiny::withProgress(message = 'Creation of the table', value = 0.5, {
-          
-          pt <- PivotTable$new()
+        shiny::withProgress(message = 'Creating the table...', value = 0.5, {
+
+          pt <- pivottabler::PivotTable$new()
           pt$addData(data)
-          
+
           # rows and columns
           for (col in input$cols) {
             if (!is.null(col) && col != "") {pt$addColumnDataGroups(col)}
           }
-          
+
           for (row in input$rows) {
             if (!is.null(row) && row != "") {pt$addRowDataGroups(row)}
           }
-          
+
           for (index in 1:length(idcs)) {
             tmp <- isolate(input[[paste0("idc_name_box_", index)]])
             if (!is.null(tmp) && tmp) {
-              
+
               label <- idcs[[index]][["label"]]
               target <- gsub(" ", "_", idcs[[index]]["target"])
               idc <- gsub(" ", "_", idcs[[index]][["idc"]])
-              format <- idcs[[index]][["format"]]
-              
+              nb_decimals <- ifelse(is.na(idcs[[index]]["nb_decimals"]), "2", idcs[[index]]["nb_decimals"])
+              sep_thousands <- ifelse(is.na(idcs[[index]]["sep_thousands"]), "", idcs[[index]]["sep_thousands"])
+              prefix <- ifelse(is.na(idcs[[index]]["prefix"]), "", idcs[[index]]["prefix"])
+              suffix <- ifelse(is.na(idcs[[index]]["suffix"]), "", idcs[[index]]["suffix"])
+
               combine <- if ("combine" %in% names(idcs[[index]])) {gsub(" ", "_", idcs[[index]]["combine"])} else {NULL}
               combine_target <- if ("combine_target" %in% names(idcs[[index]])) {gsub(" ", "_", idcs[[index]]["combine_target"])} else {NULL}
               combine_idc <- if ("combine_target" %in% names(idcs[[index]])) {gsub(" ", "_", idcs[[index]][["combine_idc"]])} else {NULL}
-              
+
               pt$defineCalculation(calculationName = paste0(target, "_", tolower(idc), "_", index),
                                    caption = label,
                                    summariseExpression = get_expr(idc, target),
-                                   format = ifelse(format == "None", format, "%.2f"),
+                                   format = list("digits" = nb_decimals, "big.mark" = sep_thousands),
+                                   cellStyleDeclarations = list("xl-value-format" = paste0(prefix, ifelse(sep_thousands == "None", "", paste0("#", sep_thousands)), "##0", ifelse(nb_decimals > 0, paste0(".", paste0(rep(0, nb_decimals), collapse = "")), ""), suffix)),
                                    visible = ifelse(is.null(combine_target), T, F))
-              
+
               if (! is.null(combine_target) && combine_target != "") {
                 pt$defineCalculation(calculationName = paste0(combine_target, "_", tolower(combine_idc), "_combine_", index),
                                      summariseExpression = get_expr(combine_idc, combine_target),
-                                     format = "%.2f",
                                      visible = FALSE)
                 pt$defineCalculation(calculationName = paste0(combine_target, "_", tolower(combine_idc), combine, combine_target, "_", tolower(combine_idc), "_combine_", index),
                                      caption = label,
                                      basedOn = c(paste0(target, "_", tolower(idc), "_", index), paste0(combine_target, "_", tolower(combine_idc), "_combine_", index)),
                                      type = "calculation",
                                      calculationExpression = paste0("values$", paste0(target, "_", tolower(idc), "_", index), combine, "values$", paste0(combine_target, "_", tolower(combine_idc), "_combine_", index)),
-                                     format = format)
+                                     format = list("digits" = nb_decimals, "big.mark" = sep_thousands),
+                                     cellStyleDeclarations = list("xl-value-format" = paste0(prefix, ifelse(sep_thousands == "None", "", paste0("#", sep_thousands)), "##0", ifelse(nb_decimals > 0, paste0(".", paste0(rep(0, nb_decimals), collapse = "")), ""), suffix)))
               }
             }
           }
-          
-          if (is.null(isolate(get_theme()))) {
-            theme <- list(
-              fontName="Courier New, Courier",
-              fontSize="1.5em",
-              headerBackgroundColor = "#217346",
-              headerColor = "rgb(255, 255, 255)",
-              cellBackgroundColor = "rgb(255, 255, 255)",
-              cellColor = "rgb(0, 0, 0)",
-              outlineCellBackgroundColor = "rgb(192, 192, 192)",
-              outlineCellColor = "rgb(0, 0, 0)",
-              totalBackgroundColor = "#59bb28",
-              totalColor = "rgb(0, 0, 0)",
-              borderColor = "rgb(64, 64, 64)")
-          } else {
-            theme <- isolate(get_theme())
-          }
-          
-          pt$theme <- theme
-          
+
           pt$evaluatePivot()
-          pt
+          store_pt(pt)
         })
       } else {
-        NULL
+        store_pt(NULL)
       }
     })
   })
-  
-  output$pivottable <- renderPivottabler({
-    store_pt <- store_pt()
-    if(!is.null(store_pt)){
-      pivottabler(store_pt, width = "100%", height = "100%")
-    }
+
+  observe({
+    cpt <- input$update_theme
+
+    isolate({
+      theme <- get_theme()
+
+      if (! is.null(cpt) && cpt > 0) {
+        showModal(
+          modalDialog(
+            title = "Update the theme",
+
+            fluidRow(
+              column(12,
+                     textInput(ns("theme_fontname"), label = "Font name",
+                               value = theme$fontName),
+                     numericInput(ns("theme_fontsize"), label = "Font size (em)",
+                               value = ifelse(is.null(theme$fontSize), 1.5, theme$fontSize), min = 0, max = 10, step = 0.5),
+                     column(6,
+                            colourpicker::colourInput(ns("theme_headerbgcolor"), label = "Header bg color",
+                                                      value = theme$headerBackgroundColor)
+                     ),
+                     column(6,
+                            colourpicker::colourInput(ns("theme_headercolor"), label = "Header color",
+                                                      value = theme$headerColor)
+                     ),
+                     column(6,
+                            colourpicker::colourInput(ns("theme_cellbgcolor"), label = "Cell bg color",
+                                                      value = theme$cellBackgroundColor)
+                     ),
+                     column(6,
+                            colourpicker::colourInput(ns("theme_cellcolor"), label = "Cell color",
+                                                      value = theme$cellColor)
+                     ),
+                     column(6,
+                            colourpicker::colourInput(ns("theme_outlinecellbgcolor"), label = "Outline cell bg color",
+                                                      value = theme$outlineCellBackgroundColor)
+                     ),
+                     column(6,
+                            colourpicker::colourInput(ns("theme_outlinecellcolor"), label = "Outline cell color",
+                                                      value = theme$OutlineCell)
+                     ),
+                     column(6,
+                            colourpicker::colourInput(ns("theme_totalbgcolor"), label = "Total bg color",
+                                                      value = theme$totalBackgroundColor)
+                     ),
+                     column(6,
+                            colourpicker::colourInput(ns("theme_totalcolor"), label = "Total color",
+                                                      value = theme$totalColor)
+                     ),
+                     colourpicker::colourInput(ns("theme_bordercolor"), label = "Border color",
+                               value = theme$borderColor)
+              )
+            ),
+            easyClose = FALSE,
+            footer = div(style = "margin-right: 20px;",
+                         fluidRow(
+                           column(3,
+                                  div(actionButton(inputId = ns("theme_valid"), label = "Validate", width = "100%"), align = "left")
+                           ),
+                           column(3, offset = 6,
+                                  div(actionButton(inputId = ns("theme_cancel"), label = "Cancel", width = "100%"), align = "right")
+                           ))
+            ))
+        )
+      }
+    })
+  })
+
+  observe({
+    cpt_valid <- input$theme_valid
+    cpt_cancel <- input$theme_cancel
+
+    isolate({
+      if (! is.null(cpt_valid) && ! is.null(cpt_cancel) && (cpt_valid > 0 || cpt_cancel > 0)) {
+        if (cpt_valid > 0) {
+          theme <- get_theme()
+
+          theme$fontName <- input$theme_fontname
+          theme$fontSize <- paste0(input$theme_fontsize, "em")
+          theme$headerBackgroundColor <- input$theme_headerbgcolor
+          theme$headerColor <- input$theme_headercolor
+          theme$cellBackgroundColor <- input$theme_cellbgcolor
+          theme$cellColor <- input$theme_cellcolor
+          theme$outlineCellBackgroundColor <- input$theme_outlinecellbgcolor
+          theme$outlineCellColor <- input$theme_outlinecellcolor
+          theme$totalBackgroundColor <- input$theme_totalbgcolor
+          theme$totalColor <- input$theme_totalcolor
+          theme$borderColor <- input$theme_bordercolor
+
+          get_theme(theme)
+        }
+
+        shiny::removeModal()
+      }
+    })
+  })
+
+  counter_pivottable <- reactiveVal(0)
+
+  observe({
+    input$go_table
+    theme <- get_theme()
+
+    isolate({
+      counter_pivottable(counter_pivottable() + 1)
+      output[[paste0("pivottable_", counter_pivottable())]] <- renderPivottabler({
+
+        isolate({
+          pt <- store_pt()
+
+          if (! is.null(pt)) {
+            pt$theme <- theme
+
+            pt$renderPivot()
+          } else {
+            NULL
+          }
+        })
+      })
+    })
+  })
+
+  output$pivottable <- renderUI({
+    div(pivottablerOutput(ns(paste0("pivottable_", counter_pivottable())), width = "100%", height = "100%"), style = "padding-top: 1.5%;")
   })
 
   output$is_pivottable <- reactive({
@@ -423,14 +693,16 @@ shinypivottabler <- function(input, output, session,
 
     isolate({
       if (! is.null(pt)) {
-        wb <- createWorkbook(creator = Sys.getenv("USERNAME"))
-        addWorksheet(wb, "Pivot table")
+        shiny::withProgress(message = 'Preparing the export...', value = 0.5, {
+          wb <- createWorkbook(creator = "Shiny pivot table")
+          addWorksheet(wb, "Pivot table")
 
-        pt$writeToExcelWorksheet(wb = wb, wsName = "Pivot table",
-                                 topRowNumber = 1, leftMostColumnNumber = 1,
-                                 outputValuesAs = "rawValue",
-                                 applyStyles = get_export_styles(), mapStylesFromCSS = TRUE)
-        wb
+          pt$writeToExcelWorksheet(wb = wb, wsName = "Pivot table",
+                                   topRowNumber = 1, leftMostColumnNumber = 1,
+                                   outputValuesAs = "formattedValueAsNumber",
+                                   applyStyles = get_export_styles(), mapStylesFromCSS = TRUE)
+          wb
+        })
       }
     })
   })
@@ -440,35 +712,42 @@ shinypivottabler <- function(input, output, session,
       paste0("pivot_table_", base::format(Sys.time(), format = "%Y%m%d_%H%M%S") ,".xlsx")
     },
     content = function(file) {
-      saveWorkbook(get_wb(), file=file, overwrite = TRUE)
+      saveWorkbook(get_wb(), file = file, overwrite = TRUE)
     }
   )
 }
 
 
 
-#' @import pivottabler shiny shinyjs
+#' @import pivottabler shiny
 #'
 #' @export
 #'
 #' @rdname shiny_pivot_table
 #'
-shinypivottablerUI <- function(id) {
+shinypivottablerUI <- function(id,
+                               app_colors = c("#59bb28", "#217346"),
+                               app_linewidth = 8) {
   ns <- shiny::NS(id)
 
   fluidPage(
-    shinyjs::useShinyjs(),
-    tags$head(
-      tags$style(HTML("
-        div.combine_padding { padding-top: 35px; }
-        "))),
-
-
-    div(h2(HTML("<b>Shiny pivot table</b>")), style = "color: #217346;, margin-left: 15px;"),
+    conditionalPanel(condition = paste0("output['", ns("show_title"), "']"),
+                     div(h2(HTML("<b>Shiny pivot table</b>")), style = paste0("color: ", app_colors[2], "; margin-left: 15px;"))
+    ),
 
     br(),
 
     # tags
+    singleton(tags$head(
+      tags$script(src = "shiny_pivot_table/button_freeze.js")
+    )),
+    singleton(tags$head(
+      tags$script(src = "shiny_pivot_table/combine_padding.js")
+    )),
+    tags$head(
+      tags$style(HTML("
+        div.combine_padding { padding-top: 35px; }
+        "))),
     tags$head(
       tags$style(HTML("
       .Table {
@@ -480,21 +759,21 @@ shinypivottablerUI <- function(id) {
     "))
     ),
     tags$head(
-      tags$style(HTML("
+      tags$style(HTML(paste0("
         ul {
           list-style: none; /* Remove default bullets */
         }
 
         ul li::before {
           content: '\\2022';
-          color: #59bb28;
+          color: ", app_colors[1], ";
           font-weight: bold;
           display: inline-block;
           width: 1em;
           margin-left: -1em;
           font-size: 20px;
         }
-      "))
+      ")))
     ),
 
     tags$head(
@@ -504,8 +783,7 @@ shinypivottablerUI <- function(id) {
     ),
 
     fluidRow(style = "padding-left: 1%; padding-right: 1%;",
-             column(12, style = "border-radius: 5px; border-top: 10px solid #59bb28; border-bottom: 10px solid #217346; border-left: 10px solid #59bb28; border-right: 10px solid #217346;",
-                    h3(HTML("<b>Definition of the pivot table</b>")),
+             column(12, style = paste0("border-radius: 3px; border-top: ", app_linewidth, "px solid ", app_colors[1], "; border-bottom: ", app_linewidth, "px solid ", app_colors[2], "; border-left: ", app_linewidth, "px solid ", app_colors[1], "; border-right: ", app_linewidth, "px solid ", app_colors[2], ";"),
 
                     br(),
 
@@ -517,12 +795,12 @@ shinypivottablerUI <- function(id) {
                                               div(uiOutput(ns("selected_indicators")), style = "margin-top: 15px; overflow-y: auto; height: 130px; overflow-x: hidden; margin-right: 10px;")
                              ),
                              conditionalPanel(condition = paste0("! output['", ns("is_idcs"), "']"),
-                                              div(h3("None"), align = "center", style = "padding-top: 20px; padding-right: 12px; color: #217346;")
+                                              div(h3("None"), align = "center", style = paste0("padding-top: 20px; padding-right: 12px; color: ", app_colors[2], ";"))
                              )
                            )
                     ),
 
-                    column(10, style = "margin-bottom: 15px; border-left: 2px solid #59bb28;",
+                    column(10, style = paste0("margin-bottom: 15px; border-left: 2px solid ", app_colors[1], ";"),
                            fluidRow(style = "margin-left: 0px; margin-bottom: -15px;",
                                     fluidRow(
                                       column(3,
@@ -535,11 +813,11 @@ shinypivottablerUI <- function(id) {
                                       )
                                     ),
 
-                                    div(hr(style = "border: 1px solid #59bb28;"), style = "margin-top: -10px;"),
+                                    div(hr(style = paste0("border: 1px solid ", app_colors[1], ";")), style = "margin-top: -10px;"),
 
                                     fluidRow(
                                       column(2,
-                                             div(id = "id_padding_1", textInput(ns("label"), label = "Label", value = "Auto", width  = "100%"))
+                                             div(id = ns("id_padding_1"), textInput(ns("label"), label = "Label", value = "Auto", width  = "100%"))
                                       ),
                                       column(4,
                                              fluidRow(
@@ -563,8 +841,7 @@ shinypivottablerUI <- function(id) {
                                                               fluidRow(
                                                                 column(6,
                                                                        selectInput(ns("combine_target"), label = "Selected target",
-                                                                                   choices = c("", "V5", "V6"),
-                                                                                   selected = "", width = "100%")
+                                                                                   choices = NULL, width = "100%")
                                                                 ),
                                                                 column(6,
                                                                        selectInput(ns("combine_idc"), label = "Selected indicator",
@@ -581,7 +858,7 @@ shinypivottablerUI <- function(id) {
                                              )
                                       ),
                                       column(2,
-                                             div(id = "id_padding_2", selectInput(ns("combine"), label = "Combine",
+                                             div(id = ns("id_padding_2"), selectInput(ns("combine"), label = "Combine",
                                                                                   choices = c("None" = "None",
                                                                                               "Add" = "+",
                                                                                               "Substract" = "-",
@@ -590,10 +867,10 @@ shinypivottablerUI <- function(id) {
                                                                                   selected = "No", width = "100%"))
                                       ),
                                       column(2,
-                                             div(id = "id_padding_3", actionButton(ns("specify_format"), label = "Specify format", width = "100%"), style = "margin-top: 25px")
+                                             div(id = ns("id_padding_3"), actionButton(ns("specify_format"), label = "Specify format", width = "100%"), style = "margin-top: 25px")
                                       ),
                                       column(2,
-                                             div(id = "id_padding_4", actionButton(ns("add_idc"), label = "Add indicator", width = "100%"), align = "center", style = "margin-top: 25px")
+                                             div(id = ns("id_padding_4"), actionButton(ns("add_idc"), label = "Add indicator", width = "100%"), align = "center", style = "margin-top: 25px")
                                       ),
                                     )
                            )
@@ -605,10 +882,13 @@ shinypivottablerUI <- function(id) {
     br(),
 
     fluidRow(style = "padding-left: 1%; padding-right: 1%;",
-             column(12, style = "padding: 2.5%; overflow-x: auto; overflow-y: auto; border-radius: 5px; border-top: 10px solid #59bb28; border-bottom: 10px solid #217346; border-left: 10px solid #59bb28; border-right: 10px solid #217346;",
+             column(12, style = paste0("padding: 2.5%; overflow-x: auto; overflow-y: auto; border-radius: 3px; border-top: ", app_linewidth, "px solid ", app_colors[1], "; border-bottom: ", app_linewidth, "px solid ", app_colors[2], "; border-left: ", app_linewidth, "px solid ", app_colors[1], "; border-right: ", app_linewidth, "px solid ", app_colors[2], ";"),
                     fluidRow(
-                      column(4, offset = 2,
+                      column(4, offset = 1,
                              div(actionButton(ns("go_table"), label = "Display table", width = "100%" ), align = "right")
+                      ),
+                      column(2,
+                             div(actionButton(ns("update_theme"), label = "Update theme", width = "100%" ), align = "right")
                       ),
                       column(4,
                              div(actionButton(ns("reset_table"), label = "Reset table", width = "100%"), align = "left")
@@ -618,14 +898,14 @@ shinypivottablerUI <- function(id) {
                     br(),
 
                     conditionalPanel(condition = paste0("output['", ns("is_pivottable"), "']"),
-                                     div(pivottablerOutput(ns('pivottable'), width = "100%", height = "100%"), style = "padding-top: 1.5%;"),
+                                     uiOutput(ns("pivottable")),
                                      br(),
                                      column(6, offset = 3,
                                             div(downloadButton(ns("export"), label = "Download table"), align = "center", style = "width: 100%;")
                                      )
                     ),
                     conditionalPanel(condition = paste0("! output['", ns("is_pivottable"), "']"),
-                                     div(h3("No data to display"), align = "center"), style = "color: #217346;")
+                                     div(h3("No data to display"), align = "center"), style = paste0("color: ", app_colors[2], ";"))
              )
     )
   )

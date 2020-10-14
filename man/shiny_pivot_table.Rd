@@ -6,9 +6,11 @@
 \title{Shiny module to render and export pivot tables.}
 \usage{
 shinypivottabler(input, output, session, data, pivot_cols = NULL,
-  indicator_cols = NULL, theme = NULL, export_styles = TRUE)
+  indicator_cols = NULL, theme = NULL, export_styles = TRUE,
+  show_title = TRUE)
 
-shinypivottablerUI(id)
+shinypivottablerUI(id, app_colors = c("#59bb28", "#217346"),
+  app_linewidth = 8)
 }
 \arguments{
 \item{input}{shiny input}
@@ -25,10 +27,16 @@ shinypivottablerUI(id)
 
 \item{theme}{\code{list} (NULL). Theme to customize the output of the pivot table.}
 
-\item{export_styles}{\code{boolean} (TRUE). Whether or not to apply styles (like the theme) when exporting to Excel.
+\item{export_styles}{\code{boolean} (TRUE). Whether or not to apply styles (like the theme) when exporting to Excel.}
+
+\item{show_title}{\code{boolean} (TRUE). Whether or not to display the app title.
 Some styles may not be supported by Excel.}
 
 \item{id}{\code{character}. Module input to allow multiple instanciation of the module.}
+
+\item{app_colors}{\code{character} (c("#59bb28", "#217346")). Colors of the app elements.}
+
+\item{app_linewidth}{\code{character} (10). Width of the borders of the two main boxes.}
 }
 \value{
 Nothing. Starts a Shiny module.
@@ -38,6 +46,8 @@ Shiny module to render and export pivot tables.
 }
 \examples{
 \dontrun{\donttest{
+
+require(data.table)
 
 # create artificial dataset
 data <- data.table("V1" = sample(c("A", "B", "C", "D"), size = 1000000,
@@ -73,7 +83,7 @@ server = function(input, output, session) {
                     id = "id",
                     data = data,
                     pivot_cols = c("V1", "V2", "V3", "V4"),
-                    theme = theme)
+                    theme = NULL)
 }
 
 shiny::shinyApp(ui = ui, server = server)
