@@ -57,13 +57,13 @@ get_expr <- function(idc, target, additional_expr) {
 #'
 #' # create artificial dataset
 #' data <- data.table("V1" = sample(c("A", "B", "C", "D"), size = 1000000,
-#'                                  prob = runif(4, 0, 1), replace = T),
+#'                                  prob = rep(1, 4), replace = T),
 #'                    "V2" = sample(c("E", "F", "G", "H"), size = 1000000,
-#'                                  prob = runif(4, 0, 1), replace = T),
+#'                                  prob = rep(1, 4), replace = T),
 #'                    "V3" = sample(c("I", "J", "K", "L"), size = 1000000,
-#'                                  prob = runif(4, 0, 1), replace = T),
+#'                                  prob = rep(1, 4), replace = T),
 #'                    "V4" = sample(c("M", "N", "O", "P"), size = 1000000,
-#'                                  prob = runif(4, 0, 1), replace = T),
+#'                                  prob = rep(1, 4), replace = T),
 #'                    "V5" = 1:1000000,
 #'                    "V6" = 1000000:1)
 #'
@@ -582,7 +582,7 @@ shinypivottabler <- function(input, output, session,
 
               if (! is.null(combine_target) && combine_target != "") {
                 pt$defineCalculation(calculationName = paste0(combine_target, "_", tolower(combine_idc), "_combine_", index),
-                                     summariseExpression = get_expr(idc, combine_target, additional_expr = c(get_additional_expr_num(), get_additional_expr_char())),
+                                     summariseExpression = get_expr(combine_idc, combine_target, additional_expr = c(get_additional_expr_num(), get_additional_expr_char())),
                                      visible = FALSE)
                 pt$defineCalculation(calculationName = paste0(combine_target, "_", tolower(combine_idc), combine, combine_target, "_", tolower(combine_idc), "_combine_", index),
                                      caption = label,
