@@ -4,17 +4,19 @@
 
 
 
-get_expr <- function(idc, target) {
+get_expr <- function(idc, target, additional_expr) {
 
-  text_idc <- list(
-    "Count" = "'n()'",
-    "Count_distinct" = "paste0('n_distinct(', target, ', na.rm = TRUE)')",
-    "Sum" = "paste0(as.numeric('sum(', target, ', na.rm = TRUE)')",
-    "Mean" = "paste0('mean(as.numeric(', target, '), na.rm = TRUE)')",
-    "Min" = "paste0('min(as.numeric(', target, '), na.rm = TRUE)')",
-    "Max" = "paste0('max(as.numeric(', target, '), na.rm = TRUE)')",
-    "Standard_deviation" = "paste0('sd(as.numeric(', target, '), na.rm = TRUE)')"
-  )
+  text_idc <- c(
+    list(
+      "Count" = "'n()'",
+      "Count_distinct" = "paste0('n_distinct(', target, ', na.rm = TRUE)')",
+      "Sum" = "paste0('sum(as.numeric(', target, '), na.rm = TRUE)')",
+      "Mean" = "paste0('mean(as.numeric(', target, '), na.rm = TRUE)')",
+      "Min" = "paste0('min(as.numeric(', target, '), na.rm = TRUE)')",
+      "Max" = "paste0('max(as.numeric(', target, '), na.rm = TRUE)')",
+      "Standard_deviation" = "paste0('sd(as.numeric(', target, '), na.rm = TRUE)')"
+    ),
+    additional_expr)
 
   return(eval(parse(text = text_idc[[idc]])))
 }
@@ -30,6 +32,9 @@ get_expr <- function(idc, target) {
 #' @param data \code{data.frame} / \code{data.table}. Initial data table.
 #' @param pivot_cols \code{character} (NULL). Columns to be used as pivot in rows and cols.
 #' @param indicator_cols \code{character} (NULL). Columns on which indicators will be calculated.
+#' @param additional_expr_num \code{named list} (list()). Additional computations to be allowed for quantitative vars.
+#' @param additional_expr_char \code{named list} (list()). Additional computations to be allowed for qualitative vars.
+#' @param additional_combine \code{named list} (list()). Additional combinations to be allowed.
 #' @param theme \code{list} (NULL). Theme to customize the output of the pivot table.
 #' @param export_styles \code{boolean} (TRUE). Whether or not to apply styles (like the theme) when exporting to Excel.
 #' @param app_colors \code{character} (c("#59bb28", "#217346")). Colors of the app elements.
@@ -79,11 +84,19 @@ get_expr <- function(idc, target) {
 #'   shinypivottablerUI(id = "id")
 #' )
 #'
+#' # we add two functions, one for quantitative variables (the median) and
+#' # one for qualitatives variables (the mode, with a custom function), and
+#' # one possible combination (the modulo).
+#' my_mode <- function(x) names(which.max(table(x)))
+#'
 #' server = function(input, output, session) {
 #'   shiny::callModule(module = shinypivottabler,
 #'                     id = "id",
 #'                     data = data,
 #'                     pivot_cols = c("V1", "V2", "V3", "V4"),
+#'                     additional_expr_num = list("Add_median" = "paste0('median(as.numeric(', target, '), na.rm = TRUE)')"),
+#'                     additional_expr_char = list("Add_mode" = "paste0('my_mode(', target, ')')"),
+#'                     additional_combine = c("Add_modulo" = "%%"),
 #'                     theme = NULL)
 #' }
 #'
@@ -94,6 +107,9 @@ shinypivottabler <- function(input, output, session,
                              data,
                              pivot_cols = NULL,
                              indicator_cols = NULL,
+                             additional_expr_num = list(),
+                             additional_expr_char = list(),
+                             additional_combine = list(),
                              theme = NULL,
                              export_styles = TRUE,
                              show_title = TRUE) {
@@ -188,6 +204,24 @@ shinypivottabler <- function(input, output, session,
     get_show_title <- show_title
   }
 
+  if (! shiny::is.reactive(additional_expr_num)) {
+    get_additional_expr_num <- shiny::reactive(additional_expr_num)
+  } else {
+    get_additional_expr_num <- additional_expr_num
+  }
+
+  if (! shiny::is.reactive(additional_expr_char)) {
+    get_additional_expr_char <- shiny::reactive(additional_expr_char)
+  } else {
+    get_additional_expr_char <- additional_expr_char
+  }
+
+  if (! shiny::is.reactive(additional_combine)) {
+    get_additional_combine <- shiny::reactive(additional_combine)
+  } else {
+    get_additional_combine <- additional_combine
+  }
+
   output$show_title <- reactive({
     get_show_title()
   })
@@ -237,20 +271,21 @@ shinypivottabler <- function(input, output, session,
 
     isolate({
       if (is.null(get_data()[[target]]) || is.numeric(get_data()[[target]])) {
+        choices <- c(
+          c("Count", "Count distinct", "Sum", "Mean", "Min", "Max", "Standard deviation"),
+          names(get_additional_expr_num())
+        )
         updateSelectInput(session = session, "idc",
-                          choices = c("Count",
-                                      "Count distinct",
-                                      "Sum",
-                                      "Mean",
-                                      "Min",
-                                      "Max",
-                                      "Standard deviation"),
-                          selected = "Count")
+                          choices = choices,
+                          selected = ifelse(input$idc %in% choices, input$idc, "Count"))
       } else if (is.character(get_data()[[target]]) || is.factor(get_data()[[target]])) {
+        choices <- c(
+          c("Count", "Count distinct"),
+          names(get_additional_expr_char())
+        )
         updateSelectInput(session = session, "idc",
-                          choices = c("Count",
-                                      "Count distinct"),
-                          selected = "Count")
+                          choices = choices,
+                          selected = ifelse(input$idc %in% choices, input$idc, "Count"))
       }
     })
   })
@@ -277,26 +312,38 @@ shinypivottabler <- function(input, output, session,
   })
   observe({
     combine_target <- input$combine_target
+    input$combine
 
     isolate({
-      if (! is.null(combine_target) && combine_target != "") {
-        if (is.null(get_data()[[combine_target]]) || is.numeric(get_data()[[combine_target]])) {
-          updateSelectInput(session = session, "combine_idc",
-                            choices = c("Count",
-                                        "Count distinct",
-                                        "Sum",
-                                        "Mean",
-                                        "Min",
-                                        "Max",
-                                        "Standard deviation"),
-                            selected = input$combine_idc)
-        } else if (is.character(get_data()[[combine_target]]) || is.factor(get_data()[[combine_target]])) {
-          updateSelectInput(session = session, "combine_idc",
-                            choices = c("Count",
-                                        "Count distinct"),
-                            selected = input$combine_idc)
-        }
+      if (is.null(combine_target) || is.null(get_data()[[combine_target]]) || is.numeric(get_data()[[combine_target]])) {
+        choices <- c(
+          c("Count", "Count distinct", "Sum", "Mean", "Min", "Max", "Standard deviation"),
+          names(get_additional_expr_num())
+        )
+        updateSelectInput(session = session, "combine_idc",
+                          choices = choices,
+                          selected = ifelse(input$combine_idc %in% choices, input$combine_idc, "Count"))
+      } else if (is.character(get_data()[[combine_target]]) || is.factor(get_data()[[combine_target]])) {
+        choices <- c(
+          c("Count", "Count distinct"),
+          names(get_additional_expr_char())
+        )
+        updateSelectInput(session = session, "combine_idc",
+                          choices = choices,
+                          selected = ifelse(input$combine_idc %in% choices, input$combine_idc, "Count"))
       }
+    })
+  })
+
+  observe({
+    isolate({
+      updateSelectInput(session = session, "combine",
+                        choices = c(c("None" = "None",
+                                      "Add" = "+",
+                                      "Substract" = "-",
+                                      "Multiply" = "*",
+                                      "Divise" = "/"),
+                                    get_additional_combine()))
     })
   })
 
@@ -528,21 +575,21 @@ shinypivottabler <- function(input, output, session,
 
               pt$defineCalculation(calculationName = paste0(target, "_", tolower(idc), "_", index),
                                    caption = label,
-                                   summariseExpression = get_expr(idc, target),
-                                   format = list("digits" = nb_decimals, "big.mark" = sep_thousands),
+                                   summariseExpression = get_expr(idc, target, additional_expr = c(get_additional_expr_num(), get_additional_expr_char())),
+                                   format = list("digits" = nb_decimals, "big.mark" = ifelse(sep_thousands == "None", "", sep_thousands), scientific = F),
                                    cellStyleDeclarations = list("xl-value-format" = paste0(prefix, ifelse(sep_thousands == "None", "", paste0("#", sep_thousands)), "##0", ifelse(nb_decimals > 0, paste0(".", paste0(rep(0, nb_decimals), collapse = "")), ""), suffix)),
                                    visible = ifelse(is.null(combine_target), T, F))
 
               if (! is.null(combine_target) && combine_target != "") {
                 pt$defineCalculation(calculationName = paste0(combine_target, "_", tolower(combine_idc), "_combine_", index),
-                                     summariseExpression = get_expr(combine_idc, combine_target),
+                                     summariseExpression = get_expr(idc, combine_target, additional_expr = c(get_additional_expr_num(), get_additional_expr_char())),
                                      visible = FALSE)
                 pt$defineCalculation(calculationName = paste0(combine_target, "_", tolower(combine_idc), combine, combine_target, "_", tolower(combine_idc), "_combine_", index),
                                      caption = label,
                                      basedOn = c(paste0(target, "_", tolower(idc), "_", index), paste0(combine_target, "_", tolower(combine_idc), "_combine_", index)),
                                      type = "calculation",
                                      calculationExpression = paste0("values$", paste0(target, "_", tolower(idc), "_", index), combine, "values$", paste0(combine_target, "_", tolower(combine_idc), "_combine_", index)),
-                                     format = list("digits" = nb_decimals, "big.mark" = sep_thousands),
+                                     format = list("digits" = nb_decimals, "big.mark" = ifelse(sep_thousands == "None", "", sep_thousands), scientific = F),
                                      cellStyleDeclarations = list("xl-value-format" = paste0(prefix, ifelse(sep_thousands == "None", "", paste0("#", sep_thousands)), "##0", ifelse(nb_decimals > 0, paste0(".", paste0(rep(0, nb_decimals), collapse = "")), ""), suffix)))
               }
             }
@@ -573,7 +620,7 @@ shinypivottabler <- function(input, output, session,
                      textInput(ns("theme_fontname"), label = "Font name",
                                value = theme$fontName),
                      numericInput(ns("theme_fontsize"), label = "Font size (em)",
-                               value = ifelse(is.null(theme$fontSize), 1.5, theme$fontSize), min = 0, max = 10, step = 0.5),
+                                  value = ifelse(is.null(theme$fontSize), 1.5, theme$fontSize), min = 0, max = 10, step = 0.5),
                      column(6,
                             colourpicker::colourInput(ns("theme_headerbgcolor"), label = "Header bg color",
                                                       value = theme$headerBackgroundColor)
@@ -607,7 +654,7 @@ shinypivottabler <- function(input, output, session,
                                                       value = theme$totalColor)
                      ),
                      colourpicker::colourInput(ns("theme_bordercolor"), label = "Border color",
-                               value = theme$borderColor)
+                                               value = theme$borderColor)
               )
             ),
             easyClose = FALSE,
@@ -835,12 +882,7 @@ shinypivottablerUI <- function(id,
                                       ),
                                       column(2,
                                              div(id = ns("id_padding_2"), selectInput(ns("combine"), label = "Combine",
-                                                                                  choices = c("None" = "None",
-                                                                                              "Add" = "+",
-                                                                                              "Substract" = "-",
-                                                                                              "Multiply" = "*",
-                                                                                              "Divise" = "/"),
-                                                                                  selected = "No", width = "100%"))
+                                                                                      NULL, width = "100%"))
                                       ),
                                       column(2,
                                              div(id = ns("id_padding_3"), actionButton(ns("specify_format"), label = "Specify format", width = "100%"), style = "margin-top: 25px")

@@ -6,8 +6,9 @@
 \title{Shiny module to render and export pivot tables.}
 \usage{
 shinypivottabler(input, output, session, data, pivot_cols = NULL,
-  indicator_cols = NULL, theme = NULL, export_styles = TRUE,
-  show_title = TRUE)
+  indicator_cols = NULL, additional_expr_num = list(),
+  additional_expr_char = list(), additional_combine = list(),
+  theme = NULL, export_styles = TRUE, show_title = TRUE)
 
 shinypivottablerUI(id, app_colors = c("#59bb28", "#217346"),
   app_linewidth = 8)
@@ -24,6 +25,12 @@ shinypivottablerUI(id, app_colors = c("#59bb28", "#217346"),
 \item{pivot_cols}{\code{character} (NULL). Columns to be used as pivot in rows and cols.}
 
 \item{indicator_cols}{\code{character} (NULL). Columns on which indicators will be calculated.}
+
+\item{additional_expr_num}{\code{named list} (list()). Additional computations to be allowed for quantitative vars.}
+
+\item{additional_expr_char}{\code{named list} (list()). Additional computations to be allowed for qualitative vars.}
+
+\item{additional_combine}{\code{named list} (list()). Additional combinations to be allowed.}
 
 \item{theme}{\code{list} (NULL). Theme to customize the output of the pivot table.}
 
@@ -78,11 +85,19 @@ ui = shiny::fluidPage(
   shinypivottablerUI(id = "id")
 )
 
+# we add two functions, one for quantitative variables (the median) and
+# one for qualitatives variables (the mode, with a custom function), and
+# one possible combination (the modulo).
+my_mode <- function(x) names(which.max(table(x)))
+
 server = function(input, output, session) {
   shiny::callModule(module = shinypivottabler,
                     id = "id",
                     data = data,
                     pivot_cols = c("V1", "V2", "V3", "V4"),
+                    additional_expr_num = list("Add_median" = "paste0('median(as.numeric(', target, '), na.rm = TRUE)')"),
+                    additional_expr_char = list("Add_mode" = "paste0('my_mode(', target, ')')"),
+                    additional_combine = c("Add_modulo" = "\%\%"),
                     theme = NULL)
 }
 
