@@ -620,7 +620,7 @@ shinypivottabler <- function(input, output, session,
                      textInput(ns("theme_fontname"), label = "Font name",
                                value = theme$fontName),
                      numericInput(ns("theme_fontsize"), label = "Font size (em)",
-                                  value = ifelse(is.null(theme$fontSize), 1.5, theme$fontSize), min = 0, max = 10, step = 0.5),
+                                  value = ifelse(is.null(input$theme_fontsize), 1.5, input$theme_fontsize), min = 0, max = 10, step = 0.5),
                      column(6,
                             colourpicker::colourInput(ns("theme_headerbgcolor"), label = "Header bg color",
                                                       value = theme$headerBackgroundColor)
