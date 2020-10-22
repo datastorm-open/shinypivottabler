@@ -61,12 +61,12 @@ shiny::shinyApp(ui = ui, server = server)
 
 - Define your pivot table
 
-![](man/figures/init_module.png)
+![](man/figures/init_module.PNG)
 
 - Visualize & export
 
-![](man/figures/view_table.png)
+![](man/figures/view_table.PNG)
 
 - Customize
 
-![](man/figures/theme.png)
+![](man/figures/theme.PNG)
