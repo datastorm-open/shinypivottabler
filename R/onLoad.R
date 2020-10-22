@@ -5,5 +5,5 @@
 #' @noRd
 #'
 .onLoad <- function(...) {
-  shiny::addResourcePath("shiny_pivot_table", system.file("www", package = "shinypivottable"))
+  shiny::addResourcePath("shiny_pivot_table", system.file("www", package = "shinypivottabler"))
 }

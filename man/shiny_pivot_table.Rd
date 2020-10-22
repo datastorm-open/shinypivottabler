@@ -5,13 +5,22 @@
 \alias{shinypivottablerUI}
 \title{Shiny module to render and export pivot tables.}
 \usage{
-shinypivottabler(input, output, session, data, pivot_cols = NULL,
-  indicator_cols = NULL, additional_expr_num = list(),
-  additional_expr_char = list(), additional_combine = list(),
-  theme = NULL, export_styles = TRUE, show_title = TRUE)
+shinypivottabler(
+  input,
+  output,
+  session,
+  data,
+  pivot_cols = NULL,
+  indicator_cols = NULL,
+  additional_expr_num = list(),
+  additional_expr_char = list(),
+  additional_combine = list(),
+  theme = NULL,
+  export_styles = TRUE,
+  show_title = TRUE
+)
 
-shinypivottablerUI(id, app_colors = c("#59bb28", "#217346"),
-  app_linewidth = 8)
+shinypivottablerUI(id, app_colors = c("#59bb28", "#217346"), app_linewidth = 8)
 }
 \arguments{
 \item{input}{shiny input}
@@ -54,23 +63,23 @@ Shiny module to render and export pivot tables.
 \examples{
 \dontrun{\donttest{
 
-require(data.table)
 
 # create artificial dataset
-data <- data.table("V1" = sample(c("A", "B", "C", "D"), size = 1000000,
-                                 prob = runif(4, 0, 1), replace = T),
+data <- data.frame("V1" = sample(c("A", "B", "C", "D"), size = 1000000,
+                                 prob = rep(1, 4), replace = T),
                    "V2" = sample(c("E", "F", "G", "H"), size = 1000000,
-                                 prob = runif(4, 0, 1), replace = T),
+                                 prob = rep(1, 4), replace = T),
                    "V3" = sample(c("I", "J", "K", "L"), size = 1000000,
-                                 prob = runif(4, 0, 1), replace = T),
+                                 prob = rep(1, 4), replace = T),
                    "V4" = sample(c("M", "N", "O", "P"), size = 1000000,
-                                 prob = runif(4, 0, 1), replace = T),
+                                 prob = rep(1, 4), replace = T),
                    "V5" = 1:1000000,
                    "V6" = 1000000:1)
 
+# defaut theme
 theme <- list(
   fontName="Courier New, Courier",
-  fontSize="1.5em",
+  fontSize="1em",
   headerBackgroundColor = "#217346",
   headerColor = "rgb(255, 255, 255)",
   cellBackgroundColor = "rgb(255, 255, 255)",
@@ -79,7 +88,8 @@ theme <- list(
   outlineCellColor = "rgb(0, 0, 0)",
   totalBackgroundColor = "#59bb28",
   totalColor = "rgb(0, 0, 0)",
-  borderColor = "rgb(64, 64, 64)")
+  borderColor = "rgb(64, 64, 64)"
+)
 
 ui = shiny::fluidPage(
   shinypivottablerUI(id = "id")
@@ -95,8 +105,12 @@ server = function(input, output, session) {
                     id = "id",
                     data = data,
                     pivot_cols = c("V1", "V2", "V3", "V4"),
-                    additional_expr_num = list("Add_median" = "paste0('median(as.numeric(', target, '), na.rm = TRUE)')"),
-                    additional_expr_char = list("Add_mode" = "paste0('my_mode(', target, ')')"),
+                    additional_expr_num = list(
+                      "Add_median" = "paste0('median(as.numeric(', target, '), na.rm = TRUE)')"
+                    ),
+                    additional_expr_char = list(
+                      "Add_mode" = "paste0('my_mode(', target, ')')"
+                    ),
                     additional_combine = c("Add_modulo" = "\%\%"),
                     theme = NULL)
 }

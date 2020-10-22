@@ -53,10 +53,9 @@ get_expr <- function(idc, target, additional_expr) {
 #' @examples
 #' \dontrun{\donttest{
 #'
-#' require(data.table)
 #'
 #' # create artificial dataset
-#' data <- data.table("V1" = sample(c("A", "B", "C", "D"), size = 1000000,
+#' data <- data.frame("V1" = sample(c("A", "B", "C", "D"), size = 1000000,
 #'                                  prob = rep(1, 4), replace = T),
 #'                    "V2" = sample(c("E", "F", "G", "H"), size = 1000000,
 #'                                  prob = rep(1, 4), replace = T),
@@ -67,9 +66,10 @@ get_expr <- function(idc, target, additional_expr) {
 #'                    "V5" = 1:1000000,
 #'                    "V6" = 1000000:1)
 #'
+#' # defaut theme
 #' theme <- list(
 #'   fontName="Courier New, Courier",
-#'   fontSize="1.5em",
+#'   fontSize="1em",
 #'   headerBackgroundColor = "#217346",
 #'   headerColor = "rgb(255, 255, 255)",
 #'   cellBackgroundColor = "rgb(255, 255, 255)",
@@ -78,7 +78,8 @@ get_expr <- function(idc, target, additional_expr) {
 #'   outlineCellColor = "rgb(0, 0, 0)",
 #'   totalBackgroundColor = "#59bb28",
 #'   totalColor = "rgb(0, 0, 0)",
-#'   borderColor = "rgb(64, 64, 64)")
+#'   borderColor = "rgb(64, 64, 64)"
+#' )
 #'
 #' ui = shiny::fluidPage(
 #'   shinypivottablerUI(id = "id")
@@ -94,8 +95,12 @@ get_expr <- function(idc, target, additional_expr) {
 #'                     id = "id",
 #'                     data = data,
 #'                     pivot_cols = c("V1", "V2", "V3", "V4"),
-#'                     additional_expr_num = list("Add_median" = "paste0('median(as.numeric(', target, '), na.rm = TRUE)')"),
-#'                     additional_expr_char = list("Add_mode" = "paste0('my_mode(', target, ')')"),
+#'                     additional_expr_num = list(
+#'                       "Add_median" = "paste0('median(as.numeric(', target, '), na.rm = TRUE)')"
+#'                     ),
+#'                     additional_expr_char = list(
+#'                       "Add_mode" = "paste0('my_mode(', target, ')')"
+#'                     ),
 #'                     additional_combine = c("Add_modulo" = "%%"),
 #'                     theme = NULL)
 #' }
@@ -160,7 +165,7 @@ shinypivottabler <- function(input, output, session,
     if (is.null(theme)) {
       get_theme <- reactiveVal(list(
         fontName="Courier New, Courier",
-        fontSize="1.5em",
+        fontSize="1.2em",
         headerBackgroundColor = "#217346",
         headerColor = "rgb(255, 255, 255)",
         cellBackgroundColor = "rgb(255, 255, 255)",
@@ -177,7 +182,7 @@ shinypivottabler <- function(input, output, session,
     if (is.null(theme())) {
       get_theme <- reactiveVal(list(
         fontName="Courier New, Courier",
-        fontSize="1.5em",
+        fontSize="1.2em",
         headerBackgroundColor = "#217346",
         headerColor = "rgb(255, 255, 255)",
         cellBackgroundColor = "rgb(255, 255, 255)",
@@ -347,10 +352,11 @@ shinypivottabler <- function(input, output, session,
     })
   })
 
-  store_format <- reactiveValues("format_digit" = 2,
+  store_format <- reactiveValues("format_digit" = 1,
                                  "format_prefix" = "",
                                  "format_suffix" = "",
-                                 "format_sep_thousands" = "None")
+                                 "format_sep_thousands" = " ",
+                                 "format_decimal" = ",")
 
   observe({
     cpt <- input$specify_format
@@ -366,11 +372,11 @@ shinypivottabler <- function(input, output, session,
                                   min = 0, max = Inf, value = store_format[["format_digit"]], step = 1, width = "100%")
               ),
               column(4,
-                     textInput(ns("format_prefix"), label = "Prefix",
+                     textInput(ns("format_prefix"), label = "Prefix (excel only)",
                                value = store_format[["format_prefix"]], width = "100%")
               ),
               column(4,
-                     textInput(ns("format_suffix"), label = "Suffix",
+                     textInput(ns("format_suffix"), label = "Suffix (excel only)",
                                value = store_format[["format_suffix"]], width = "100%")
               )
             ),
@@ -378,6 +384,10 @@ shinypivottabler <- function(input, output, session,
               column(4,
                      selectInput(ns("format_sep_thousands"), label = "Thousands sep.",
                                  choices = c("None", "Space" = " ", ","), selected = store_format[["format_sep_thousands"]], width = "100%")
+              ),
+              column(4,
+                     selectInput(ns("format_sep_decimals"), label = "Decimal sep.",
+                                 choices = c(".", ","), selected = store_format[["format_decimal"]], width = "100%")
               )
             ),
             easyClose = FALSE,
@@ -404,6 +414,7 @@ shinypivottabler <- function(input, output, session,
         store_format$format_prefix <- input$format_prefix
         store_format$format_suffix <- input$format_suffix
         store_format$format_sep_thousands <- input$format_sep_thousands
+        store_format$format_decimal <- input$format_sep_decimals
 
         shiny::removeModal()
       }
@@ -416,6 +427,8 @@ shinypivottabler <- function(input, output, session,
                         value = store_format[["format_suffix"]])
         updateSelectInput(session = session, "format_sep_thousands",
                           selected = store_format[["format_sep_thousands"]])
+        updateSelectInput(session = session, "format_sep_decimals",
+                          selected = store_format[["format_decimal"]])
 
         shiny::removeModal()
       }
@@ -443,8 +456,9 @@ shinypivottabler <- function(input, output, session,
 
           idcs(c(idcs(), list(c("label" = label,
                                 "target" = input$target, "idc" = input$idc,
-                                "nb_decimals" = input$format_digit,
+                                "nb_decimals" = ifelse(input$idc %in% c("Count", "Count distinct"), 0, input$format_digit),
                                 "sep_thousands" = input$format_sep_thousands,
+                                "sep_decimal" = input$format_sep_decimals,
                                 "prefix" = input$format_prefix,
                                 "suffix" = input$format_suffix))))
         } else {
@@ -453,8 +467,9 @@ shinypivottabler <- function(input, output, session,
                          input$label)
           idcs(c(idcs(), list(c("label" = label,
                                 "target" = input$target, "idc" = input$idc,
-                                "nb_decimals" = input$format_digit,
+                                "nb_decimals" = ifelse(input$idc %in% c("Count", "Count distinct"), 0, input$format_digit),
                                 "sep_thousands" = input$format_sep_thousands,
+                                "sep_decimal" = input$format_sep_decimals,
                                 "prefix" = input$format_prefix,
                                 "suffix" = input$format_suffix,
                                 "combine" = input$combine, "combine_target" = input$combine_target, "combine_idc" = input$combine_idc))))
@@ -492,7 +507,8 @@ shinypivottabler <- function(input, output, session,
                                    "<br><b> Indicator 2 : </b>", tolower(indicators[[index]][["combine_idc"]]))
                           },
                           "<br><b> Nb. decimal : </b>", ifelse("nb_decimals" %in% names(indicators[[index]]), indicators[[index]][["nb_decimals"]], 2),
-                          "<br><b> Thousands sep : </b>", ifelse("sep_thousands" %in% names(indicators[[index]]), indicators[[index]][["sep_thousands"]], 2),
+                          "<br><b> Decimal sep : </b>", ifelse("sep_decimal" %in% names(indicators[[index]]), indicators[[index]][["sep_decimal"]], ","),
+                          "<br><b> Thousands sep : </b>", ifelse("sep_thousands" %in% names(indicators[[index]]), indicators[[index]][["sep_thousands"]], " "),
                           "<br><b> Prefix sep : </b>", ifelse("prefix" %in% names(indicators[[index]]), indicators[[index]][["prefix"]], ""),
                           "<br><b> Suffix sep : </b>", ifelse("suffix" %in% names(indicators[[index]]), indicators[[index]][["suffix"]], ""))
 
@@ -564,8 +580,9 @@ shinypivottabler <- function(input, output, session,
               label <- idcs[[index]][["label"]]
               target <- gsub(" ", "_", idcs[[index]]["target"])
               idc <- gsub(" ", "_", idcs[[index]][["idc"]])
-              nb_decimals <- ifelse(is.na(idcs[[index]]["nb_decimals"]), "2", idcs[[index]]["nb_decimals"])
-              sep_thousands <- ifelse(is.na(idcs[[index]]["sep_thousands"]), "", idcs[[index]]["sep_thousands"])
+              nb_decimals <- ifelse(is.na(idcs[[index]]["nb_decimals"]), 1, idcs[[index]]["nb_decimals"])
+              sep_thousands <- ifelse(is.na(idcs[[index]]["sep_thousands"]), " ", idcs[[index]]["sep_thousands"])
+              sep_decimal <- ifelse(is.na(idcs[[index]]["sep_decimal"]), ",", idcs[[index]]["sep_decimal"])
               prefix <- ifelse(is.na(idcs[[index]]["prefix"]), "", idcs[[index]]["prefix"])
               suffix <- ifelse(is.na(idcs[[index]]["suffix"]), "", idcs[[index]]["suffix"])
 
@@ -576,8 +593,11 @@ shinypivottabler <- function(input, output, session,
               pt$defineCalculation(calculationName = paste0(target, "_", tolower(idc), "_", index),
                                    caption = label,
                                    summariseExpression = get_expr(idc, target, additional_expr = c(get_additional_expr_num(), get_additional_expr_char())),
-                                   format = list("digits" = nb_decimals, "big.mark" = ifelse(sep_thousands == "None", "", sep_thousands), scientific = F),
-                                   cellStyleDeclarations = list("xl-value-format" = paste0(prefix, ifelse(sep_thousands == "None", "", paste0("#", sep_thousands)), "##0", ifelse(nb_decimals > 0, paste0(".", paste0(rep(0, nb_decimals), collapse = "")), ""), suffix)),
+                                   format = list("digits" = nb_decimals, "nsmall" = nb_decimals,
+                                                 "decimal.mark" = sep_decimal,
+                                                 "big.mark" = ifelse(sep_thousands == "None", "", sep_thousands),
+                                                 scientific = F),
+                                   cellStyleDeclarations = list("xl-value-format" = paste0(prefix, ifelse(sep_thousands == "None", "", paste0("#", sep_thousands)), "##0", ifelse(nb_decimals > 0, paste0(sep_decimal, paste0(rep(0, nb_decimals), collapse = "")), ""), suffix)),
                                    visible = ifelse(is.null(combine_target), T, F))
 
               if (! is.null(combine_target) && combine_target != "") {
@@ -589,8 +609,10 @@ shinypivottabler <- function(input, output, session,
                                      basedOn = c(paste0(target, "_", tolower(idc), "_", index), paste0(combine_target, "_", tolower(combine_idc), "_combine_", index)),
                                      type = "calculation",
                                      calculationExpression = paste0("values$", paste0(target, "_", tolower(idc), "_", index), combine, "values$", paste0(combine_target, "_", tolower(combine_idc), "_combine_", index)),
-                                     format = list("digits" = nb_decimals, "big.mark" = ifelse(sep_thousands == "None", "", sep_thousands), scientific = F),
-                                     cellStyleDeclarations = list("xl-value-format" = paste0(prefix, ifelse(sep_thousands == "None", "", paste0("#", sep_thousands)), "##0", ifelse(nb_decimals > 0, paste0(".", paste0(rep(0, nb_decimals), collapse = "")), ""), suffix)))
+                                     format = list("digits" = nb_decimals, "nsmall" = nb_decimals,
+                                                   "decimal.mark" = sep_decimal,
+                                                   "big.mark" = ifelse(sep_thousands == "None", "", sep_thousands), scientific = F),
+                                     cellStyleDeclarations = list("xl-value-format" = paste0(prefix, ifelse(sep_thousands == "None", "", paste0("#", sep_thousands)), "##0", ifelse(nb_decimals > 0, paste0(sep_decimal, paste0(rep(0, nb_decimals), collapse = "")), ""), suffix)))
               }
             }
           }
@@ -620,13 +642,13 @@ shinypivottabler <- function(input, output, session,
                      textInput(ns("theme_fontname"), label = "Font name",
                                value = theme$fontName),
                      numericInput(ns("theme_fontsize"), label = "Font size (em)",
-                                  value = ifelse(is.null(input$theme_fontsize), 1.5, input$theme_fontsize), min = 0, max = 10, step = 0.5),
+                                  value = as.numeric(gsub("em$", "", theme$fontSize)), min = 0, max = 10, step = 0.5),
                      column(6,
                             colourpicker::colourInput(ns("theme_headerbgcolor"), label = "Header bg color",
                                                       value = theme$headerBackgroundColor)
                      ),
                      column(6,
-                            colourpicker::colourInput(ns("theme_headercolor"), label = "Header color",
+                            colourpicker::colourInput(ns("theme_headercolor"), label = "Header text color",
                                                       value = theme$headerColor)
                      ),
                      column(6,
@@ -634,7 +656,7 @@ shinypivottabler <- function(input, output, session,
                                                       value = theme$cellBackgroundColor)
                      ),
                      column(6,
-                            colourpicker::colourInput(ns("theme_cellcolor"), label = "Cell color",
+                            colourpicker::colourInput(ns("theme_cellcolor"), label = "Cell text color",
                                                       value = theme$cellColor)
                      ),
                      column(6,
@@ -642,7 +664,7 @@ shinypivottabler <- function(input, output, session,
                                                       value = theme$outlineCellBackgroundColor)
                      ),
                      column(6,
-                            colourpicker::colourInput(ns("theme_outlinecellcolor"), label = "Outline cell color",
+                            colourpicker::colourInput(ns("theme_outlinecellcolor"), label = "Outline text cell color",
                                                       value = theme$OutlineCell)
                      ),
                      column(6,
@@ -650,7 +672,7 @@ shinypivottabler <- function(input, output, session,
                                                       value = theme$totalBackgroundColor)
                      ),
                      column(6,
-                            colourpicker::colourInput(ns("theme_totalcolor"), label = "Total color",
+                            colourpicker::colourInput(ns("theme_totalcolor"), label = "Total text color",
                                                       value = theme$totalColor)
                      ),
                      colourpicker::colourInput(ns("theme_bordercolor"), label = "Border color",
