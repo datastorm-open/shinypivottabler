@@ -17,7 +17,8 @@ shinypivottabler(
   additional_combine = list(),
   theme = NULL,
   export_styles = TRUE,
-  show_title = TRUE
+  show_title = TRUE,
+  initialization = NULL
 )
 
 shinypivottablerUI(id, app_colors = c("#59bb28", "#217346"), app_linewidth = 8)
@@ -47,12 +48,6 @@ shinypivottablerUI(id, app_colors = c("#59bb28", "#217346"), app_linewidth = 8)
 
 \item{show_title}{\code{boolean} (TRUE). Whether or not to display the app title.
 Some styles may not be supported by Excel.}
-
-\item{id}{\code{character}. Module input to allow multiple instanciation of the module.}
-
-\item{app_colors}{\code{character} (c("#59bb28", "#217346")). Colors of the app elements.}
-
-\item{app_linewidth}{\code{character} (10). Width of the borders of the two main boxes.}
 }
 \value{
 Nothing. Starts a Shiny module.
@@ -63,6 +58,25 @@ Shiny module to render and export pivot tables.
 \examples{
 \dontrun{\donttest{
 
+initialization <- list(
+  "rows" = "V1",
+  "cols" = "V2",
+  "target" = "V3",
+  "combine_target" = V4,
+  "idc" = "count",
+  "combine_idc" = "count",
+  "combine" = "/",
+  "idcs" = list(
+    list(c("label" = "Init_variable",
+           "target" = "V3", "idc" = "Count",
+           "nb_decimals" = 0,
+           "sep_thousands" = " ",
+           "sep_decimal" = ".",
+           "prefix" = "",
+           "suffix" = "",
+           "combine" = "/", "combine_target" = "V4", "combine_idc" = "Count"))
+  )
+)
 
 # create artificial dataset
 data <- data.frame("V1" = sample(c("A", "B", "C", "D"), size = 1000000,
@@ -112,7 +126,8 @@ server = function(input, output, session) {
                       "Add_mode" = "paste0('my_mode(', target, ')')"
                     ),
                     additional_combine = c("Add_modulo" = "\%\%"),
-                    theme = NULL)
+                    theme = NULL,
+                    initialization = initialization)
 }
 
 shiny::shinyApp(ui = ui, server = server)

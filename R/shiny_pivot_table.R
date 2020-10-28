@@ -28,7 +28,6 @@ get_expr <- function(idc, target, additional_expr) {
 #' @param input shiny input
 #' @param output shiny input
 #' @param session shiny input
-#' @param id \code{character}. Module input to allow multiple instanciation of the module.
 #' @param data \code{data.frame} / \code{data.table}. Initial data table.
 #' @param pivot_cols \code{character} (NULL). Columns to be used as pivot in rows and cols.
 #' @param indicator_cols \code{character} (NULL). Columns on which indicators will be calculated.
@@ -37,10 +36,19 @@ get_expr <- function(idc, target, additional_expr) {
 #' @param additional_combine \code{named list} (list()). Additional combinations to be allowed.
 #' @param theme \code{list} (NULL). Theme to customize the output of the pivot table.
 #' @param export_styles \code{boolean} (TRUE). Whether or not to apply styles (like the theme) when exporting to Excel.
-#' @param app_colors \code{character} (c("#59bb28", "#217346")). Colors of the app elements.
-#' @param app_linewidth \code{character} (10). Width of the borders of the two main boxes.
 #' @param show_title \code{boolean} (TRUE). Whether or not to display the app title.
 #' Some styles may not be supported by Excel.
+#' @param initialization  \code{named list} (NULL). Initialization parameters to display a table when launching the module.
+#' Available fields are :
+#'\itemize{
+#'  \item{\code{rows:}}{ Selected pivot rows.}
+#'  \item{\code{cols:}}{ Selected pivot columns.}
+#'  \item{\code{target, combine target:} { Selected target and combine_target columns.}.
+#'  \item{\code{idc, combine_idc:}}{ Selected idc and combine_idc columns.}
+#'  \item{\code{combine:}}{ Selected combine operator.}
+#'  \item{\code{format_digit, format_prefix, format_suffix, format_sep_thousands, format_decimal:}}{ Selected formats for the table idc.}
+#'  \item{\code{idcs:}}{ idcs to be displayed (list of named list), see the example to get the fields.}
+#'}
 #'
 #' @return Nothing. Starts a Shiny module.
 #'
@@ -52,7 +60,6 @@ get_expr <- function(idc, target, additional_expr) {
 #'
 #' @examples
 #' \dontrun{\donttest{
-#'
 #'
 #' # create artificial dataset
 #' data <- data.frame("V1" = sample(c("A", "B", "C", "D"), size = 1000000,
@@ -66,11 +73,53 @@ get_expr <- function(idc, target, additional_expr) {
 #'                    "V5" = 1:1000000,
 #'                    "V6" = 1000000:1)
 #'
-#' # defaut theme
+#' # Minimal example
+#'
+#' ui = shiny::fluidPage(
+#'   shinypivottablerUI(id = "id")
+#' )
+#'
+#' server = function(input, output, session) {
+#'   shiny::callModule(module = shinypivottabler,
+#'                     id = "id",
+#'                     data = data)
+#' }
+#'
+#' shiny::shinyApp(ui = ui, server = server)
+#'
+#'
+#'
+#' # Complete example
+#'
+#' initialization <- list(
+#'   "rows" = "V1",
+#'   "cols" = "V2",
+#'   "target" = "V3",
+#'   "combine_target" = "V4",
+#'   "idc" = "Count",
+#'   "combine_idc" = "Count",
+#'   "combine" = "/",
+#'   "idcs" = c(list(c("label" = "Init_variable_1",
+#'                   "target" = "V3", "idc" = "Count",
+#'                   "nb_decimals" = 0,
+#'                   "sep_thousands" = " ",
+#'                   "sep_decimal" = ".",
+#'                   "prefix" = "",
+#'                   "suffix" = "",
+#'                   "combine" = "/", "combine_target" = "V4", "combine_idc" = "Count")),
+#'                list(c("label" = "Init_variable_2",
+#'                   "target" = "V3", "idc" = "Count",
+#'                   "nb_decimals" = 0,
+#'                   "sep_thousands" = " ",
+#'                   "sep_decimal" = ".",
+#'                   "prefix" = "",
+#'                   "suffix" = "")))
+#' )
+#'
 #' theme <- list(
 #'   fontName="Courier New, Courier",
 #'   fontSize="1em",
-#'   headerBackgroundColor = "#217346",
+#'   headerBackgroundColor = "red",
 #'   headerColor = "rgb(255, 255, 255)",
 #'   cellBackgroundColor = "rgb(255, 255, 255)",
 #'   cellColor = "rgb(0, 0, 0)",
@@ -102,7 +151,8 @@ get_expr <- function(idc, target, additional_expr) {
 #'                       "Add_mode" = "paste0('my_mode(', target, ')')"
 #'                     ),
 #'                     additional_combine = c("Add_modulo" = "%%"),
-#'                     theme = NULL)
+#'                     theme = theme,
+#'                     initialization = initialization)
 #' }
 #'
 #' shiny::shinyApp(ui = ui, server = server)
@@ -117,7 +167,8 @@ shinypivottabler <- function(input, output, session,
                              additional_combine = list(),
                              theme = NULL,
                              export_styles = TRUE,
-                             show_title = TRUE) {
+                             show_title = TRUE,
+                             initialization = NULL) {
 
   ns <- session$ns
 
@@ -161,41 +212,44 @@ shinypivottabler <- function(input, output, session,
     get_indicator_cols <- indicator_cols
   }
 
-  if (! shiny::is.reactive(theme)) {
-    if (is.null(theme)) {
-      get_theme <- reactiveVal(list(
-        fontName="Courier New, Courier",
-        fontSize="1.2em",
-        headerBackgroundColor = "#217346",
-        headerColor = "rgb(255, 255, 255)",
-        cellBackgroundColor = "rgb(255, 255, 255)",
-        cellColor = "rgb(0, 0, 0)",
-        outlineCellBackgroundColor = "rgb(192, 192, 192)",
-        outlineCellColor = "rgb(0, 0, 0)",
-        totalBackgroundColor = "#59bb28",
-        totalColor = "rgb(0, 0, 0)",
-        borderColor = "rgb(64, 64, 64)"))
+  get_theme <- reactiveVal(NULL)
+  observe({
+    if (! shiny::is.reactive(theme)) {
+      if (is.null(theme)) {
+        get_theme(list(
+          fontName="Courier New, Courier",
+          fontSize="1.2em",
+          headerBackgroundColor = "#217346",
+          headerColor = "rgb(255, 255, 255)",
+          cellBackgroundColor = "rgb(255, 255, 255)",
+          cellColor = "rgb(0, 0, 0)",
+          outlineCellBackgroundColor = "rgb(192, 192, 192)",
+          outlineCellColor = "rgb(0, 0, 0)",
+          totalBackgroundColor = "#59bb28",
+          totalColor = "rgb(0, 0, 0)",
+          borderColor = "rgb(64, 64, 64)"))
+      } else {
+        get_theme(theme)
+      }
     } else {
-      get_theme <- reactiveVal(theme)
+      if (is.null(theme())) {
+        get_theme(list(
+          fontName="Courier New, Courier",
+          fontSize="1.2em",
+          headerBackgroundColor = "#217346",
+          headerColor = "rgb(255, 255, 255)",
+          cellBackgroundColor = "rgb(255, 255, 255)",
+          cellColor = "rgb(0, 0, 0)",
+          outlineCellBackgroundColor = "rgb(192, 192, 192)",
+          outlineCellColor = "rgb(0, 0, 0)",
+          totalBackgroundColor = "#59bb28",
+          totalColor = "rgb(0, 0, 0)",
+          borderColor = "rgb(64, 64, 64)"))
+      } else {
+        get_theme(theme())
+      }
     }
-  } else {
-    if (is.null(theme())) {
-      get_theme <- reactiveVal(list(
-        fontName="Courier New, Courier",
-        fontSize="1.2em",
-        headerBackgroundColor = "#217346",
-        headerColor = "rgb(255, 255, 255)",
-        cellBackgroundColor = "rgb(255, 255, 255)",
-        cellColor = "rgb(0, 0, 0)",
-        outlineCellBackgroundColor = "rgb(192, 192, 192)",
-        outlineCellColor = "rgb(0, 0, 0)",
-        totalBackgroundColor = "#59bb28",
-        totalColor = "rgb(0, 0, 0)",
-        borderColor = "rgb(64, 64, 64)"))
-    } else {
-      get_theme <- reactiveVal(theme())
-    }
-  }
+  })
 
   if (! shiny::is.reactive(export_styles)) {
     get_export_styles <- shiny::reactive(export_styles)
@@ -227,6 +281,21 @@ shinypivottabler <- function(input, output, session,
     get_additional_combine <- additional_combine
   }
 
+  if (! shiny::is.reactive(initialization)) {
+    trigger_initialization <- shiny::reactive(initialization)
+  } else {
+    trigger_initialization <- shiny::reactive(initialization())
+  }
+
+  get_initialization <- reactiveVal(NULL)
+  observe({
+    if (! shiny::is.reactive(initialization)) {
+      get_initialization(initialization)
+    } else {
+      get_initialization(initialization())
+    }
+  })
+
   output$show_title <- reactive({
     get_show_title()
   })
@@ -235,46 +304,55 @@ shinypivottabler <- function(input, output, session,
   # update inputs
   observe({
     pivot_cols <- get_pivot_cols()
+    trigger_initialization()
 
     isolate({
+      initialization <- get_initialization()
+
       if (is.null(pivot_cols)) {
         updateSelectInput(session = session, "rows",
                           choices = c("", names(get_data())),
-                          selected = "")
+                          selected = if (is.null(initialization$rows)) {""} else {initialization$rows})
         updateSelectInput(session = session, "cols",
                           choices = c("", names(get_data())),
-                          selected = "")
+                          selected = if (is.null(initialization$cols)) {""} else {initialization$cols})
       } else {
         updateSelectInput(session = session, "rows",
                           choices = c("", pivot_cols),
-                          selected = "")
+                          selected = if (is.null(initialization$rows)) {""} else {initialization$rows})
         updateSelectInput(session = session, "cols",
                           choices = c("", pivot_cols),
-                          selected = "")
+                          selected = if (is.null(initialization$cols)) {""} else {initialization$cols})
       }
     })
   })
 
   observe({
     indicator_cols <- get_indicator_cols()
+    trigger_initialization()
 
     isolate({
+      initialization <- get_initialization()
+
       if (is.null(indicator_cols)) {
         updateSelectInput(session = session, "target",
                           choices = c("", names(which(sapply(get_data(), function(x) is.numeric(x) || is.character(x) || is.factor(x))))),
-                          selected = "")
+                          selected = if (is.null(initialization$target)) {""} else {initialization$target})
       } else {
         updateSelectInput(session = session, "target",
                           choices = c("", indicator_cols),
-                          selected = "")
+                          selected = if (is.null(initialization$target)) {""} else {initialization$target})
       }
     })
   })
 
   observe({
     target <- input$target
+    trigger_initialization()
 
     isolate({
+      initialization <- get_initialization()
+
       if (is.null(get_data()[[target]]) || is.numeric(get_data()[[target]])) {
         choices <- c(
           c("Count", "Count distinct", "Sum", "Mean", "Min", "Max", "Standard deviation"),
@@ -282,7 +360,7 @@ shinypivottabler <- function(input, output, session,
         )
         updateSelectInput(session = session, "idc",
                           choices = choices,
-                          selected = ifelse(input$idc %in% choices, input$idc, "Count"))
+                          selected = if (is.null(initialization$idc)) {ifelse(input$idc %in% choices, input$idc, "Count")} else {initialization$idc})
       } else if (is.character(get_data()[[target]]) || is.factor(get_data()[[target]])) {
         choices <- c(
           c("Count", "Count distinct"),
@@ -290,26 +368,28 @@ shinypivottabler <- function(input, output, session,
         )
         updateSelectInput(session = session, "idc",
                           choices = choices,
-                          selected = ifelse(input$idc %in% choices, input$idc, "Count"))
+                          selected = if (is.null(initialization$idc)) {ifelse(input$idc %in% choices, input$idc, "Count")} else {initialization$idc})
       }
     })
   })
   observe({
     combine <- input$combine
+    trigger_initialization()
 
     isolate({
       indicator_cols <- get_indicator_cols()
+      initialization <- get_initialization()
 
       if (! is.null(combine) && combine != "None") {
         if (is.null(input$combine_target) || input$combine_target == "") {
           if (is.null(indicator_cols)) {
             updateSelectInput(session = session, "combine_target",
                               choices = c("", names(which(sapply(get_data(), function(x) is.numeric(x) || is.character(x) || is.factor(x))))),
-                              selected = "")
+                              selected = if (is.null(initialization$combine_target)) {""} else {initialization$combine_target})
           } else {
             updateSelectInput(session = session, "combine_target",
                               choices = c("", indicator_cols),
-                              selected = "")
+                              selected = if (is.null(initialization$combine_target)) {""} else {initialization$combine_target})
           }
         }
       }
@@ -318,8 +398,11 @@ shinypivottabler <- function(input, output, session,
   observe({
     combine_target <- input$combine_target
     input$combine
+    trigger_initialization()
 
     isolate({
+      initialization <- get_initialization()
+
       if (is.null(combine_target) || is.null(get_data()[[combine_target]]) || is.numeric(get_data()[[combine_target]])) {
         choices <- c(
           c("Count", "Count distinct", "Sum", "Mean", "Min", "Max", "Standard deviation"),
@@ -327,7 +410,7 @@ shinypivottabler <- function(input, output, session,
         )
         updateSelectInput(session = session, "combine_idc",
                           choices = choices,
-                          selected = ifelse(input$combine_idc %in% choices, input$combine_idc, "Count"))
+                          selected = if (is.null(initialization$combine_idc)) {ifelse(input$combine_idc %in% choices, input$combine_idc, "Count")} else {initialization$combine_idc})
       } else if (is.character(get_data()[[combine_target]]) || is.factor(get_data()[[combine_target]])) {
         choices <- c(
           c("Count", "Count distinct"),
@@ -335,20 +418,25 @@ shinypivottabler <- function(input, output, session,
         )
         updateSelectInput(session = session, "combine_idc",
                           choices = choices,
-                          selected = ifelse(input$combine_idc %in% choices, input$combine_idc, "Count"))
+                          selected = if (is.null(initialization$combine_idc)) {ifelse(input$combine_idc %in% choices, input$combine_idc, "Count")} else {initialization$combine_idc})
       }
     })
   })
 
   observe({
+    trigger_initialization()
+
     isolate({
+      initialization <- get_initialization()
+
       updateSelectInput(session = session, "combine",
                         choices = c(c("None" = "None",
                                       "Add" = "+",
                                       "Substract" = "-",
                                       "Multiply" = "*",
                                       "Divise" = "/"),
-                                    get_additional_combine()))
+                                    get_additional_combine()),
+                        selected = if (is.null(initialization$combine)) {"None"} else {initialization$combine})
     })
   })
 
@@ -479,6 +567,28 @@ shinypivottabler <- function(input, output, session,
   })
 
   observe({
+    trigger_initialization()
+
+    isolate({
+      initialization <- get_initialization()
+
+      if (! is.null(initialization)) {
+        # update format defaults
+        store_format$format_digit <- ifelse(is.null(initialization$format_digit), store_format$format_digit, initialization$format_digit)
+        store_format$format_prefix <- ifelse(is.null(initialization$format_prefix), store_format$format_prefix, initialization$format_prefix)
+        store_format$format_suffix <- ifelse(is.null(initialization$format_suffix), store_format$format_suffix, initialization$format_suffix)
+        store_format$format_sep_thousands <- ifelse(is.null(initialization$format_sep_thousands), store_format$format_sep_thousands, initialization$format_sep_thousands)
+        store_format$format_decimal <- ifelse(is.null(initialization$format_decimal), store_format$format_decimal, initialization$format_decimal)
+
+        # update idcs
+        if (! is.null(initialization$idcs)) {
+          idcs(initialization$idcs)
+        }
+      }
+    })
+  })
+
+  observe({
     indicators <- idcs()
 
     isolate({
@@ -515,7 +625,7 @@ shinypivottabler <- function(input, output, session,
           fluidRow(
             column(3,
                    div(checkboxInput(ns(paste0("idc_name_box_", index)), label = "",
-                                     value = ifelse(length(idcs()) < index + 1, T, input[[paste0("idc_name_box_", index)]])), style = "margin-top: -12px; margin-bottom: -10px; margin-left: 2px;"),
+                                     value = if (length(idcs()) < index + 1) {T} else {! is.null(get_initialization()) || input[[paste0("idc_name_box_", index)]]}), style = "margin-top: -12px; margin-bottom: -10px; margin-left: 2px;"),
             ),
             column(9,
                    div(textOutput(ns(paste0("idc_name_", index)), container = span), style = "margin-bottom: -10px; margin-left: -20%;")
@@ -553,36 +663,39 @@ shinypivottabler <- function(input, output, session,
   store_pt <- reactiveVal(NULL)
   observe({
     cpt <- input$go_table
+    trigger_initialization()
 
     isolate({
       idcs <- isolate(idcs())
       data <- isolate(get_data())
+      initialization <- get_initialization()
 
-      if (! is.null(cpt) && cpt > 0 && ! is.null(idcs) && length(idcs) > 0 && ! is.null(data)) {
+      if (((! is.null(cpt) && cpt > 0 && ! is.null(idcs) && ! is.null(data)) || ! is.null(initialization)) && length(idcs) > 0) {
         shiny::withProgress(message = 'Creating the table...', value = 0.5, {
 
           pt <- pivottabler::PivotTable$new()
           pt$addData(data)
 
           # rows and columns
-          for (col in input$cols) {
-            if (!is.null(col) && col != "") {pt$addColumnDataGroups(col)}
+          cols <- if (is.null(initialization$cols)) {input$cols} else {initialization$cols}
+          for (col in cols) {
+            if (! is.null(col) && col != "") {pt$addColumnDataGroups(col)}
           }
-
-          for (row in input$rows) {
-            if (!is.null(row) && row != "") {pt$addRowDataGroups(row)}
+          rows <- if (is.null(initialization$rows)) {input$rows} else {initialization$rows}
+          for (row in rows) {
+            if (! is.null(row) && row != "") {pt$addRowDataGroups(row)}
           }
 
           for (index in 1:length(idcs)) {
-            tmp <- isolate(input[[paste0("idc_name_box_", index)]])
-            if (!is.null(tmp) && tmp) {
+            is_checked <- input[[paste0("idc_name_box_", index)]]
 
+            if ((! is.null(is_checked) && is_checked) || ! is.null(initialization)) {
               label <- idcs[[index]][["label"]]
               target <- gsub(" ", "_", idcs[[index]]["target"])
               idc <- gsub(" ", "_", idcs[[index]][["idc"]])
               nb_decimals <- ifelse(is.na(idcs[[index]]["nb_decimals"]), 1, idcs[[index]]["nb_decimals"])
               sep_thousands <- ifelse(is.na(idcs[[index]]["sep_thousands"]), " ", idcs[[index]]["sep_thousands"])
-              sep_decimal <- ifelse(is.na(idcs[[index]]["sep_decimal"]), ",", idcs[[index]]["sep_decimal"])
+              sep_decimal <- ifelse(is.na(idcs[[index]]["sep_decimal"]), ".", idcs[[index]]["sep_decimal"])
               prefix <- ifelse(is.na(idcs[[index]]["prefix"]), "", idcs[[index]]["prefix"])
               suffix <- ifelse(is.na(idcs[[index]]["suffix"]), "", idcs[[index]]["suffix"])
 
@@ -728,6 +841,7 @@ shinypivottabler <- function(input, output, session,
   observe({
     input$go_table
     theme <- get_theme()
+    trigger_initialization()
 
     isolate({
       counter_pivottable(counter_pivottable() + 1)
@@ -737,9 +851,14 @@ shinypivottabler <- function(input, output, session,
           pt <- store_pt()
 
           if (! is.null(pt)) {
+            if (! is.null(get_initialization())) {
+              get_initialization(NULL)
+            }
+
             pt$theme <- theme
 
             pt$renderPivot()
+
           } else {
             NULL
           }
