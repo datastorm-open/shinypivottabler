@@ -366,7 +366,7 @@ shinypivottabler <- function(input, output, session,
 
     isolate({
       initialization <- get_initialization()
-
+browser()
       if (is.null(get_data()[[target]]) || is.numeric(get_data()[[target]])) {
         choices <- c(
           c("Count", "Count distinct", "Sum", "Mean", "Min", "Max", "Standard deviation"),
@@ -555,7 +555,7 @@ shinypivottabler <- function(input, output, session,
 
   observe({
     cpt <- input$add_idc
-
+browser()
     isolate({
       if (! is.null(cpt) && cpt > 0 && ! is.null(input$target) && input$target != "" &&
           (! is.null(input$combine) && input$combine == "None" || (! is.null(input$combine_target) && input$combine_target != ""))) {
@@ -679,7 +679,8 @@ shinypivottabler <- function(input, output, session,
 
     isolate({
       idcs <- isolate(idcs())
-      data <- isolate(get_data())
+      data <- copy(isolate(get_data()))
+      names(data) <- gsub("[[:punct:]| ]", "_", names(data))
       initialization <- get_initialization()
 
       if (! is.null(data) && (((! is.null(cpt) && cpt > 0 && ! is.null(idcs)) || ! is.null(initialization)) && length(idcs) > 0)) {
@@ -689,13 +690,13 @@ shinypivottabler <- function(input, output, session,
           pt$addData(data)
 
           # rows and columns
-          cols <- if (is.null(initialization$cols)) {input$cols} else {initialization$cols}
-          for (col in cols) {
-            if (! is.null(col) && col != "") {pt$addColumnDataGroups(col)}
-          }
           rows <- if (is.null(initialization$rows)) {input$rows} else {initialization$rows}
           for (row in rows) {
-            if (! is.null(row) && row != "") {pt$addRowDataGroups(row)}
+            if (! is.null(row) && row != "") {pt$addRowDataGroups(gsub("[[:punct:]| ]", "_", row))}
+          }
+          cols <- if (is.null(initialization$cols)) {input$cols} else {initialization$cols}
+          for (col in cols) {
+            if (! is.null(col) && col != "") {pt$addColumnDataGroups(gsub("[[:punct:]| ]", "_", col))}
           }
 
           for (index in 1:length(idcs)) {
@@ -703,17 +704,17 @@ shinypivottabler <- function(input, output, session,
 
             if ((! is.null(is_checked) && is_checked) || ! is.null(initialization)) {
               label <- idcs[[index]][["label"]]
-              target <- gsub(" ", "_", idcs[[index]]["target"])
-              idc <- gsub(" ", "_", idcs[[index]][["idc"]])
+              target <- gsub("[[:punct:]| ]", "_", idcs[[index]]["target"])
+              idc <- gsub("[[:punct:]| ]", "_", idcs[[index]][["idc"]])
               nb_decimals <- ifelse(is.na(idcs[[index]]["nb_decimals"]), 1, idcs[[index]]["nb_decimals"])
               sep_thousands <- ifelse(is.na(idcs[[index]]["sep_thousands"]), " ", idcs[[index]]["sep_thousands"])
               sep_decimal <- ifelse(is.na(idcs[[index]]["sep_decimal"]), ".", idcs[[index]]["sep_decimal"])
               prefix <- ifelse(is.na(idcs[[index]]["prefix"]), "", idcs[[index]]["prefix"])
               suffix <- ifelse(is.na(idcs[[index]]["suffix"]), "", idcs[[index]]["suffix"])
 
-              combine <- if ("combine" %in% names(idcs[[index]])) {gsub(" ", "_", idcs[[index]]["combine"])} else {NULL}
-              combine_target <- if ("combine_target" %in% names(idcs[[index]])) {gsub(" ", "_", idcs[[index]]["combine_target"])} else {NULL}
-              combine_idc <- if ("combine_target" %in% names(idcs[[index]])) {gsub(" ", "_", idcs[[index]][["combine_idc"]])} else {NULL}
+              combine <- if ("combine" %in% names(idcs[[index]])) {gsub("[[:punct:]| ]", "_", idcs[[index]]["combine"])} else {NULL}
+              combine_target <- if ("combine_target" %in% names(idcs[[index]])) {gsub("[[:punct:]| ]", "_", idcs[[index]]["combine_target"])} else {NULL}
+              combine_idc <- if ("combine_target" %in% names(idcs[[index]])) {gsub("[[:punct:]| ]", "_", idcs[[index]][["combine_idc"]])} else {NULL}
 
               pt$defineCalculation(calculationName = paste0(target, "_", tolower(idc), "_", index),
                                    caption = label,
