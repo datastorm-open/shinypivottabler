@@ -30,6 +30,7 @@ get_expr <- function(idc, target, additional_expr) {
 #' @param session shiny input
 #' @param data \code{data.frame} / \code{data.table}. Initial data table.
 #' @param pivot_cols \code{character} (NULL). Columns to be used as pivot in rows and cols.
+#' @param max_n_pivot_cols \code{numeric} (100). Maximum unique values for a \code{pivot_cols} if pivot_cols = NULL
 #' @param indicator_cols \code{character} (NULL). Columns on which indicators will be calculated.
 #' @param additional_expr_num \code{named list} (list()). Additional computations to be allowed for quantitative vars.
 #' @param additional_expr_char \code{named list} (list()). Additional computations to be allowed for qualitative vars.
@@ -165,6 +166,7 @@ shinypivottabler <- function(input, output, session,
                              data,
                              pivot_cols = NULL,
                              indicator_cols = NULL,
+                             max_n_pivot_cols = 100,
                              additional_expr_num = list(),
                              additional_expr_char = list(),
                              additional_combine = list(),
@@ -222,6 +224,12 @@ shinypivottabler <- function(input, output, session,
     get_indicator_cols <- shiny::reactive(indicator_cols)
   } else {
     get_indicator_cols <- indicator_cols
+  }
+
+  if (! shiny::is.reactive(max_n_pivot_cols)) {
+    get_max_n_pivot_cols <- shiny::reactive(max_n_pivot_cols)
+  } else {
+    get_max_n_pivot_cols <- max_n_pivot_cols
   }
 
   get_theme <- reactiveVal(NULL)
@@ -323,11 +331,15 @@ shinypivottabler <- function(input, output, session,
       initialization <- get_initialization()
 
       if (is.null(pivot_cols)) {
+        ctrl_col <- sapply(data, function(x) length(unique(x)) <= get_max_n_pivot_cols())
+
+        choix <- names(ctrl_col)[ctrl_col]
+
         updateSelectInput(session = session, "rows",
-                          choices = c("", names(data)),
+                          choices = c("", choix),
                           selected = if (is.null(initialization$rows)) {""} else {initialization$rows})
         updateSelectInput(session = session, "cols",
-                          choices = c("", names(data)),
+                          choices = c("", choix),
                           selected = if (is.null(initialization$cols)) {""} else {initialization$cols})
       } else {
         updateSelectInput(session = session, "rows",
@@ -350,7 +362,7 @@ shinypivottabler <- function(input, output, session,
 
       if (is.null(indicator_cols) && have_data()) {
         updateSelectInput(session = session, "target",
-                          choices = c("", names(which(sapply(data, function(x) is.numeric(x) || is.character(x) || is.factor(x))))),
+                          choices = c("", names(which(sapply(data, function(x) any(class(x) %in% c("logical", "numeric", "integer", "character", "factor")))))),
                           selected = if (is.null(initialization$target)) {""} else {initialization$target})
       } else {
         updateSelectInput(session = session, "target",
@@ -399,7 +411,7 @@ shinypivottabler <- function(input, output, session,
         if (is.null(input$combine_target) || input$combine_target == "") {
           if (is.null(indicator_cols) && have_data()) {
             updateSelectInput(session = session, "combine_target",
-                              choices = c("", names(which(sapply(data, function(x) is.numeric(x) || is.character(x) || is.factor(x))))),
+                              choices = c("", names(which(sapply(data, function(x) any(class(x) %in% c("logical", "numeric", "integer", "character", "factor")))))),
                               selected = if (is.null(initialization$combine_target)) {""} else {initialization$combine_target})
           } else {
             updateSelectInput(session = session, "combine_target",
