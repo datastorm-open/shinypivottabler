@@ -567,22 +567,24 @@ shinypivottabler <- function(input, output, session,
 
           idcs(c(idcs(), list(c("label" = label,
                                 "target" = input$target, "idc" = input$idc,
-                                "nb_decimals" = ifelse(input$idc %in% c("Count", "Count distinct"), 0, input$format_digit),
-                                "sep_thousands" = input$format_sep_thousands,
-                                "sep_decimal" = input$format_sep_decimals,
-                                "prefix" = input$format_prefix,
-                                "suffix" = input$format_suffix))))
+                                "nb_decimals" = ifelse(input$idc %in% c("Count", "Count distinct"), 0,
+                                                       ifelse(!is.null(input$format_digit), input$format_digit, store_format$format_digit)),
+                                "sep_thousands" = ifelse(!is.null(input$format_sep_thousands), input$format_sep_thousands, store_format$format_sep_thousands),
+                                "sep_decimal" = ifelse(!is.null(input$format_sep_decimals), input$format_sep_decimals, store_format$format_decimal),
+                                "prefix" = ifelse(!is.null(input$format_prefix), input$format_prefix, store_format$format_prefix),
+                                "suffix" = ifelse(!is.null(input$format_suffix), input$format_suffix, store_format$format_suffix)))))
         } else {
           label = ifelse(input$label %in% c("Auto", ""),
                          paste0(input$target, "_", input$idc, " ", input$combine, " ", input$combine_target, "_", input$combine_idc),
                          input$label)
           idcs(c(idcs(), list(c("label" = label,
                                 "target" = input$target, "idc" = input$idc,
-                                "nb_decimals" = ifelse(input$idc %in% c("Count", "Count distinct"), 0, input$format_digit),
-                                "sep_thousands" = input$format_sep_thousands,
-                                "sep_decimal" = input$format_sep_decimals,
-                                "prefix" = input$format_prefix,
-                                "suffix" = input$format_suffix,
+                                "nb_decimals" = ifelse(input$idc %in% c("Count", "Count distinct"), 0,
+                                                       ifelse(!is.null(input$format_digit), input$format_digit, store_format$format_digit)),
+                                "sep_thousands" = ifelse(!is.null(input$format_sep_thousands), input$format_sep_thousands, store_format$format_sep_thousands),
+                                "sep_decimal" = ifelse(!is.null(input$format_sep_decimals), input$format_sep_decimals, store_format$format_decimal),
+                                "prefix" = ifelse(!is.null(input$format_prefix), input$format_prefix, store_format$format_prefix),
+                                "suffix" = ifelse(!is.null(input$format_suffix), input$format_suffix, store_format$format_suffix),
                                 "combine" = input$combine, "combine_target" = input$combine_target, "combine_idc" = input$combine_idc))))
         }
       }
