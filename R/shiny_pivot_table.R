@@ -61,6 +61,9 @@ get_expr <- function(idc, target, additional_expr) {
 #' @examples
 #' \dontrun{\donttest{
 #'
+#' require(shinypivottabler)
+#' require(shiny)
+#'
 #' # create artificial dataset
 #' data <- data.frame("V1" = sample(c("A", "B", "C", "D"), size = 1000000,
 #'                                  prob = rep(1, 4), replace = T),
@@ -200,6 +203,15 @@ shinypivottabler <- function(input, output, session,
     get_data <- data
   }
 
+  have_data <- reactive({
+    data <- get_data()
+    ! is.null(data) && any(c("data.frame", "tbl", "tbl_df", "data.table") %in% class(data)) && nrow(data) > 0
+  })
+  output$ui_have_data <- reactive({
+    have_data()
+  })
+  outputOptions(output, "ui_have_data", suspendWhenHidden = FALSE)
+
   if (! shiny::is.reactive(pivot_cols)) {
     get_pivot_cols <- shiny::reactive(pivot_cols)
   } else {
@@ -303,18 +315,19 @@ shinypivottabler <- function(input, output, session,
 
   # update inputs
   observe({
-    pivot_cols <- get_pivot_cols()
+    data <- get_data()
     trigger_initialization()
 
     isolate({
+      pivot_cols <- get_pivot_cols()
       initialization <- get_initialization()
 
       if (is.null(pivot_cols)) {
         updateSelectInput(session = session, "rows",
-                          choices = c("", names(get_data())),
+                          choices = c("", names(data)),
                           selected = if (is.null(initialization$rows)) {""} else {initialization$rows})
         updateSelectInput(session = session, "cols",
-                          choices = c("", names(get_data())),
+                          choices = c("", names(data)),
                           selected = if (is.null(initialization$cols)) {""} else {initialization$cols})
       } else {
         updateSelectInput(session = session, "rows",
@@ -328,15 +341,16 @@ shinypivottabler <- function(input, output, session,
   })
 
   observe({
-    indicator_cols <- get_indicator_cols()
+    data <- get_data()
     trigger_initialization()
 
     isolate({
+      indicator_cols <- get_indicator_cols()
       initialization <- get_initialization()
 
-      if (is.null(indicator_cols)) {
+      if (is.null(indicator_cols) && have_data()) {
         updateSelectInput(session = session, "target",
-                          choices = c("", names(which(sapply(get_data(), function(x) is.numeric(x) || is.character(x) || is.factor(x))))),
+                          choices = c("", names(which(sapply(data, function(x) is.numeric(x) || is.character(x) || is.factor(x))))),
                           selected = if (is.null(initialization$target)) {""} else {initialization$target})
       } else {
         updateSelectInput(session = session, "target",
@@ -373,6 +387,7 @@ shinypivottabler <- function(input, output, session,
     })
   })
   observe({
+    data <- get_data()
     combine <- input$combine
     trigger_initialization()
 
@@ -382,9 +397,9 @@ shinypivottabler <- function(input, output, session,
 
       if (! is.null(combine) && combine != "None") {
         if (is.null(input$combine_target) || input$combine_target == "") {
-          if (is.null(indicator_cols)) {
+          if (is.null(indicator_cols) && have_data()) {
             updateSelectInput(session = session, "combine_target",
-                              choices = c("", names(which(sapply(get_data(), function(x) is.numeric(x) || is.character(x) || is.factor(x))))),
+                              choices = c("", names(which(sapply(data, function(x) is.numeric(x) || is.character(x) || is.factor(x))))),
                               selected = if (is.null(initialization$combine_target)) {""} else {initialization$combine_target})
           } else {
             updateSelectInput(session = session, "combine_target",
@@ -530,6 +545,14 @@ shinypivottabler <- function(input, output, session,
   })
   outputOptions(output, "is_idcs", suspendWhenHidden = FALSE)
 
+  observeEvent(input$reset_table || is.null(get_data()), {
+
+    isolate({
+        idcs(list())
+        store_pt(NULL)
+    })
+  }, ignoreInit = TRUE, ignoreNULL = TRUE)
+
   observe({
     cpt <- input$add_idc
 
@@ -625,7 +648,7 @@ shinypivottabler <- function(input, output, session,
           fluidRow(
             column(3,
                    div(checkboxInput(ns(paste0("idc_name_box_", index)), label = "",
-                                     value = if (length(idcs()) < index + 1) {T} else {! is.null(get_initialization()) || input[[paste0("idc_name_box_", index)]]}), style = "margin-top: -12px; margin-bottom: -10px; margin-left: 2px;"),
+                                     value = if (length(idcs()) < index + 1) {T} else {! is.null(get_initialization()) || input[[paste0("idc_name_box_", index)]]}), style = "margin-top: -12px; margin-bottom: -10px; margin-left: 2px;")
             ),
             column(9,
                    div(textOutput(ns(paste0("idc_name_", index)), container = span), style = "margin-bottom: -10px; margin-left: -20%;")
@@ -649,17 +672,6 @@ shinypivottabler <- function(input, output, session,
     })
   })
 
-  observeEvent(input$reset_table, {
-    cpt <- input$reset_table
-
-    isolate({
-      if (! is.null(cpt) && cpt > 0) {
-        idcs(list())
-        store_pt(NULL)
-      }
-    })
-  }, ignoreInit = TRUE, ignoreNULL = TRUE)
-
   store_pt <- reactiveVal(NULL)
   observe({
     cpt <- input$go_table
@@ -670,7 +682,7 @@ shinypivottabler <- function(input, output, session,
       data <- isolate(get_data())
       initialization <- get_initialization()
 
-      if (((! is.null(cpt) && cpt > 0 && ! is.null(idcs) && ! is.null(data)) || ! is.null(initialization)) && length(idcs) > 0) {
+      if (! is.null(data) && (((! is.null(cpt) && cpt > 0 && ! is.null(idcs)) || ! is.null(initialization)) && length(idcs) > 0)) {
         shiny::withProgress(message = 'Creating the table...', value = 0.5, {
 
           pt <- pivottabler::PivotTable$new()
@@ -937,135 +949,123 @@ shinypivottablerUI <- function(id,
         div.combine_padding { padding-top: 35px; }
         "))),
     tags$head(
-      tags$style(HTML(paste0("
-        ul {
-          list-style: none; /* Remove default bullets */
-        }
-
-        ul li::before {
-          content: '\\2022';
-          color: ", app_colors[1], ";
-          font-weight: bold;
-          display: inline-block;
-          width: 1em;
-          margin-left: -1em;
-          font-size: 20px;
-        }
-      ")))
-    ),
-
-    tags$head(
       tags$style("
         .btn { width: 100%; }
       ")
     ),
 
-    fluidRow(style = "padding-left: 1%; padding-right: 1%;",
-             column(12, style = paste0("border-radius: 3px; border-top: ", app_linewidth, "px solid ", app_colors[1], "; border-bottom: ", app_linewidth, "px solid ", app_colors[2], "; border-left: ", app_linewidth, "px solid ", app_colors[1], "; border-right: ", app_linewidth, "px solid ", app_colors[2], ";"),
+    conditionalPanel(condition = paste0("output['", ns("ui_have_data"), "']"),
+                     fluidRow(style = "padding-left: 1%; padding-right: 1%;",
+                              column(12, style = paste0("border-radius: 3px; border-top: ", app_linewidth, "px solid ", app_colors[1], "; border-bottom: ", app_linewidth, "px solid ", app_colors[2], "; border-left: ", app_linewidth, "px solid ", app_colors[1], "; border-right: ", app_linewidth, "px solid ", app_colors[2], ";"),
 
-                    br(),
+                                     br(),
 
-                    column(2,
-                           fluidRow(
-                             div(h4(HTML("<b>Selected indicators</b>")), align = "center", style = "padding-right: 12px;"),
+                                     column(2,
+                                            fluidRow(
+                                              div(h4(HTML("<b>Selected indicators</b>")), align = "center", style = "padding-right: 12px;"),
 
-                             conditionalPanel(condition = paste0("output['", ns("is_idcs"), "']"),
-                                              div(uiOutput(ns("selected_indicators")), style = "margin-top: 15px; overflow-y: auto; height: 130px; overflow-x: hidden; margin-right: 10px;")
-                             ),
-                             conditionalPanel(condition = paste0("! output['", ns("is_idcs"), "']"),
-                                              div(h3("None"), align = "center", style = paste0("padding-top: 20px; padding-right: 12px; color: ", app_colors[2], ";"))
-                             )
-                           )
-                    ),
+                                              conditionalPanel(condition = paste0("output['", ns("is_idcs"), "']"),
+                                                               div(uiOutput(ns("selected_indicators")), style = "margin-top: 15px; overflow-y: auto; height: 130px; overflow-x: hidden; margin-right: 10px;")
+                                              ),
+                                              conditionalPanel(condition = paste0("! output['", ns("is_idcs"), "']"),
+                                                               div(h3("None"), align = "center", style = paste0("padding-top: 20px; padding-right: 12px; color: ", app_colors[2], ";"))
+                                              )
+                                            )
+                                     ),
 
-                    column(10, style = paste0("margin-bottom: 15px; border-left: 2px solid ", app_colors[1], ";"),
-                           fluidRow(style = "margin-left: 0px; margin-bottom: -15px;",
-                                    fluidRow(
-                                      column(3,
-                                             selectInput(ns("rows"), label = "Selected rows",
-                                                         choices = NULL, multiple = T, width = "100%")
-                                      ),
-                                      column(3,
-                                             selectInput(ns("cols"), label = "Selected columns",
-                                                         choices = NULL, multiple = T, width = "100%")
-                                      )
-                                    ),
+                                     column(10, style = paste0("margin-bottom: 15px; border-left: 2px solid ", app_colors[1], ";"),
+                                            fluidRow(style = "margin-left: 0px; margin-bottom: -15px;",
+                                                     fluidRow(
+                                                       column(3,
+                                                              selectInput(ns("rows"), label = "Selected rows",
+                                                                          choices = NULL, multiple = T, width = "100%")
+                                                       ),
+                                                       column(3,
+                                                              selectInput(ns("cols"), label = "Selected columns",
+                                                                          choices = NULL, multiple = T, width = "100%")
+                                                       )
+                                                     ),
 
-                                    div(hr(style = paste0("border: 1px solid ", app_colors[1], ";")), style = "margin-top: -10px;"),
+                                                     div(hr(style = paste0("border: 1px solid ", app_colors[1], ";")), style = "margin-top: -10px;"),
 
-                                    fluidRow(
-                                      column(2,
-                                             div(id = ns("id_padding_1"), textInput(ns("label"), label = "Label", value = "Auto", width  = "100%"))
-                                      ),
-                                      column(4,
-                                             fluidRow(
-                                               column(6,
-                                                      selectInput(ns("target"), label = "Selected target",
-                                                                  choices = NULL, width = "100%")
-                                               ),
-                                               column(6,
-                                                      selectInput(ns("idc"), label = "Selected indicator",
-                                                                  choices = NULL, width = "100%")
-                                               )
-                                             ),
-                                             conditionalPanel(condition = paste0("input['", ns("combine"), "'] !== 'None'"),
+                                                     fluidRow(
+                                                       column(2,
+                                                              div(id = ns("id_padding_1"), textInput(ns("label"), label = "Label", value = "Auto", width  = "100%"))
+                                                       ),
+                                                       column(4,
                                                               fluidRow(
                                                                 column(6,
-                                                                       selectInput(ns("combine_target"), label = "Selected target",
+                                                                       selectInput(ns("target"), label = "Selected target",
                                                                                    choices = NULL, width = "100%")
                                                                 ),
                                                                 column(6,
-                                                                       selectInput(ns("combine_idc"), label = "Selected indicator",
-                                                                                   NULL, width = "100%")
+                                                                       selectInput(ns("idc"), label = "Selected indicator",
+                                                                                   choices = NULL, width = "100%")
                                                                 )
+                                                              ),
+                                                              conditionalPanel(condition = paste0("input['", ns("combine"), "'] !== 'None'"),
+                                                                               fluidRow(
+                                                                                 column(6,
+                                                                                        selectInput(ns("combine_target"), label = "Selected target",
+                                                                                                    choices = NULL, width = "100%")
+                                                                                 ),
+                                                                                 column(6,
+                                                                                        selectInput(ns("combine_idc"), label = "Selected indicator",
+                                                                                                    NULL, width = "100%")
+                                                                                 )
+                                                                               )
                                                               )
-                                             )
-                                      ),
-                                      column(2,
-                                             div(id = ns("id_padding_2"), selectInput(ns("combine"), label = "Combine",
-                                                                                      NULL, width = "100%"))
-                                      ),
-                                      column(2,
-                                             div(id = ns("id_padding_3"), actionButton(ns("specify_format"), label = "Specify format", width = "100%"), style = "margin-top: 25px")
-                                      ),
-                                      column(2,
-                                             div(id = ns("id_padding_4"), actionButton(ns("add_idc"), label = "Add indicator", width = "100%"), align = "center", style = "margin-top: 25px")
-                                      ),
-                                    )
-                           )
-                    )
-             )
-    ),
-
-    br(),
-    br(),
-
-    fluidRow(style = "padding-left: 1%; padding-right: 1%;",
-             column(12, style = paste0("padding: 2.5%; overflow-x: auto; overflow-y: auto; border-radius: 3px; border-top: ", app_linewidth, "px solid ", app_colors[1], "; border-bottom: ", app_linewidth, "px solid ", app_colors[2], "; border-left: ", app_linewidth, "px solid ", app_colors[1], "; border-right: ", app_linewidth, "px solid ", app_colors[2], ";"),
-                    fluidRow(
-                      column(4, offset = 1,
-                             div(actionButton(ns("go_table"), label = "Display table", width = "100%" ), align = "right")
-                      ),
-                      column(2,
-                             div(actionButton(ns("update_theme"), label = "Update theme", width = "100%" ), align = "right")
-                      ),
-                      column(4,
-                             div(actionButton(ns("reset_table"), label = "Reset table", width = "100%"), align = "left")
-                      )
-                    ),
-
-                    br(),
-
-                    conditionalPanel(condition = paste0("output['", ns("is_pivottable"), "']"),
-                                     uiOutput(ns("pivottable")),
-                                     br(),
-                                     column(6, offset = 3,
-                                            div(downloadButton(ns("export"), label = "Download table"), align = "center", style = "width: 100%;")
+                                                       ),
+                                                       column(2,
+                                                              div(id = ns("id_padding_2"), selectInput(ns("combine"), label = "Combine",
+                                                                                                       NULL, width = "100%"))
+                                                       ),
+                                                       column(2,
+                                                              div(id = ns("id_padding_3"), actionButton(ns("specify_format"), label = "Specify format", width = "100%"), style = "margin-top: 25px")
+                                                       ),
+                                                       column(2,
+                                                              div(id = ns("id_padding_4"), actionButton(ns("add_idc"), label = "Add indicator", width = "100%"), align = "center", style = "margin-top: 25px")
+                                                       )
+                                                     )
+                                            )
                                      )
-                    ),
-                    conditionalPanel(condition = paste0("! output['", ns("is_pivottable"), "']"),
-                                     div(h3("No data to display"), align = "center"), style = paste0("color: ", app_colors[2], ";"))
-             )
+                              )
+                     ),
+
+                     br(),
+                     br(),
+
+                     fluidRow(style = "padding-left: 1%; padding-right: 1%;",
+                              column(12, style = paste0("padding: 2.5%; overflow-x: auto; overflow-y: auto; border-radius: 3px; border-top: ", app_linewidth, "px solid ", app_colors[1], "; border-bottom: ", app_linewidth, "px solid ", app_colors[2], "; border-left: ", app_linewidth, "px solid ", app_colors[1], "; border-right: ", app_linewidth, "px solid ", app_colors[2], ";"),
+                                     fluidRow(
+                                       column(4, offset = 1,
+                                              div(actionButton(ns("go_table"), label = "Display table", width = "100%" ), align = "right")
+                                       ),
+                                       column(2,
+                                              div(actionButton(ns("update_theme"), label = "Update theme", width = "100%" ), align = "right")
+                                       ),
+                                       column(4,
+                                              div(actionButton(ns("reset_table"), label = "Reset table", width = "100%"), align = "left")
+                                       )
+                                     ),
+
+                                     br(),
+
+                                     conditionalPanel(condition = paste0("output['", ns("is_pivottable"), "']"),
+                                                      uiOutput(ns("pivottable")),
+                                                      br(),
+                                                      column(6, offset = 3,
+                                                             div(downloadButton(ns("export"), label = "Download table"), align = "center", style = "width: 100%;")
+                                                      )
+                                     ),
+                                     conditionalPanel(condition = paste0("! output['", ns("is_pivottable"), "']"),
+                                                      div(h3("No data to display"), align = "center", style = paste0("color: ", app_colors[2], ";"))
+                                     )
+                              )
+                     )
+    ),
+    conditionalPanel(condition = paste0("output['", ns("ui_have_data"), "'] === false"),
+                     div(h3("No data to display"), align = "center", style = paste0("color: ", app_colors[2], ";"))
     )
   )
 }

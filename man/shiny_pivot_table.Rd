@@ -58,25 +58,8 @@ Shiny module to render and export pivot tables.
 \examples{
 \dontrun{\donttest{
 
-initialization <- list(
-  "rows" = "V1",
-  "cols" = "V2",
-  "target" = "V3",
-  "combine_target" = V4,
-  "idc" = "count",
-  "combine_idc" = "count",
-  "combine" = "/",
-  "idcs" = list(
-    list(c("label" = "Init_variable",
-           "target" = "V3", "idc" = "Count",
-           "nb_decimals" = 0,
-           "sep_thousands" = " ",
-           "sep_decimal" = ".",
-           "prefix" = "",
-           "suffix" = "",
-           "combine" = "/", "combine_target" = "V4", "combine_idc" = "Count"))
-  )
-)
+require(shinypivottabler)
+require(shiny)
 
 # create artificial dataset
 data <- data.frame("V1" = sample(c("A", "B", "C", "D"), size = 1000000,
@@ -90,11 +73,53 @@ data <- data.frame("V1" = sample(c("A", "B", "C", "D"), size = 1000000,
                    "V5" = 1:1000000,
                    "V6" = 1000000:1)
 
-# defaut theme
+# Minimal example
+
+ui = shiny::fluidPage(
+  shinypivottablerUI(id = "id")
+)
+
+server = function(input, output, session) {
+  shiny::callModule(module = shinypivottabler,
+                    id = "id",
+                    data = data)
+}
+
+shiny::shinyApp(ui = ui, server = server)
+
+
+
+# Complete example
+
+initialization <- list(
+  "rows" = "V1",
+  "cols" = "V2",
+  "target" = "V3",
+  "combine_target" = "V4",
+  "idc" = "Count",
+  "combine_idc" = "Count",
+  "combine" = "/",
+  "idcs" = c(list(c("label" = "Init_variable_1",
+                  "target" = "V3", "idc" = "Count",
+                  "nb_decimals" = 0,
+                  "sep_thousands" = " ",
+                  "sep_decimal" = ".",
+                  "prefix" = "",
+                  "suffix" = "",
+                  "combine" = "/", "combine_target" = "V4", "combine_idc" = "Count")),
+               list(c("label" = "Init_variable_2",
+                  "target" = "V3", "idc" = "Count",
+                  "nb_decimals" = 0,
+                  "sep_thousands" = " ",
+                  "sep_decimal" = ".",
+                  "prefix" = "",
+                  "suffix" = "")))
+)
+
 theme <- list(
   fontName="Courier New, Courier",
   fontSize="1em",
-  headerBackgroundColor = "#217346",
+  headerBackgroundColor = "red",
   headerColor = "rgb(255, 255, 255)",
   cellBackgroundColor = "rgb(255, 255, 255)",
   cellColor = "rgb(0, 0, 0)",
@@ -126,7 +151,7 @@ server = function(input, output, session) {
                       "Add_mode" = "paste0('my_mode(', target, ')')"
                     ),
                     additional_combine = c("Add_modulo" = "\%\%"),
-                    theme = NULL,
+                    theme = theme,
                     initialization = initialization)
 }
 
