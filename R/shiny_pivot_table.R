@@ -321,6 +321,20 @@ shinypivottabler <- function(input, output, session,
   })
   outputOptions(output, "show_title", suspendWhenHidden = FALSE)
 
+  # estimate the number of rows and cols in the pivot table
+  ctrl_var_len <- reactive({
+    sapply(get_data(), function(x) length(unique(x)))
+  })
+
+  output$estimated_size <- renderText({
+    rows <- input$rows
+    cols <- input$cols
+
+    isolate({
+      paste0("<b>Estimated size : ", ifelse(is.null(rows), 1, Reduce("*", ctrl_var_len()[rows])), "</b> rows  x  <b>", ifelse(is.null(cols), 1, Reduce("*", ctrl_var_len()[cols])), "</b> colums")
+    })
+  })
+
   # update inputs
   observe({
     data <- get_data()
@@ -331,15 +345,13 @@ shinypivottabler <- function(input, output, session,
       initialization <- get_initialization()
 
       if (is.null(pivot_cols)) {
-        ctrl_col <- sapply(data, function(x) length(unique(x)) <= get_max_n_pivot_cols())
-
-        choix <- names(ctrl_col)[ctrl_col]
+        choices <- names(ctrl_var_len())[ctrl_var_len() <= get_max_n_pivot_cols()]
 
         updateSelectInput(session = session, "rows",
-                          choices = c("", choix),
+                          choices = c("", choices),
                           selected = if (is.null(initialization$rows)) {""} else {initialization$rows})
         updateSelectInput(session = session, "cols",
-                          choices = c("", choix),
+                          choices = c("", choices),
                           selected = if (is.null(initialization$cols)) {""} else {initialization$cols})
       } else {
         updateSelectInput(session = session, "rows",
@@ -378,7 +390,7 @@ shinypivottabler <- function(input, output, session,
 
     isolate({
       initialization <- get_initialization()
-browser()
+
       if (is.null(get_data()[[target]]) || is.numeric(get_data()[[target]])) {
         choices <- c(
           c("Count", "Count distinct", "Sum", "Mean", "Min", "Max", "Standard deviation"),
@@ -567,7 +579,7 @@ browser()
 
   observe({
     cpt <- input$add_idc
-browser()
+
     isolate({
       if (! is.null(cpt) && cpt > 0 && ! is.null(input$target) && input$target != "" &&
           (! is.null(input$combine) && input$combine == "None" || (! is.null(input$combine_target) && input$combine_target != ""))) {
@@ -719,16 +731,16 @@ browser()
             if ((! is.null(is_checked) && is_checked) || ! is.null(initialization)) {
               label <- idcs[[index]][["label"]]
               target <- gsub("[[:punct:]| ]", "_", idcs[[index]]["target"])
-              idc <- gsub("[[:punct:]| ]", "_", idcs[[index]][["idc"]])
+              idc <- gsub(" ", "_", idcs[[index]][["idc"]])
               nb_decimals <- ifelse(is.na(idcs[[index]]["nb_decimals"]), 1, idcs[[index]]["nb_decimals"])
               sep_thousands <- ifelse(is.na(idcs[[index]]["sep_thousands"]), " ", idcs[[index]]["sep_thousands"])
               sep_decimal <- ifelse(is.na(idcs[[index]]["sep_decimal"]), ".", idcs[[index]]["sep_decimal"])
               prefix <- ifelse(is.na(idcs[[index]]["prefix"]), "", idcs[[index]]["prefix"])
               suffix <- ifelse(is.na(idcs[[index]]["suffix"]), "", idcs[[index]]["suffix"])
 
-              combine <- if ("combine" %in% names(idcs[[index]])) {gsub("[[:punct:]| ]", "_", idcs[[index]]["combine"])} else {NULL}
+              combine <- if ("combine" %in% names(idcs[[index]])) {idcs[[index]]["combine"]} else {NULL}
               combine_target <- if ("combine_target" %in% names(idcs[[index]])) {gsub("[[:punct:]| ]", "_", idcs[[index]]["combine_target"])} else {NULL}
-              combine_idc <- if ("combine_target" %in% names(idcs[[index]])) {gsub("[[:punct:]| ]", "_", idcs[[index]][["combine_idc"]])} else {NULL}
+              combine_idc <- if ("combine_idc" %in% names(idcs[[index]])) {gsub(" ", "_", idcs[[index]][["combine_idc"]])} else {NULL}
 
               pt$defineCalculation(calculationName = paste0(target, "_", tolower(idc), "_", index),
                                    caption = label,
@@ -998,6 +1010,9 @@ shinypivottablerUI <- function(id,
                                                        column(3,
                                                               selectInput(ns("cols"), label = "Selected columns",
                                                                           choices = NULL, multiple = T, width = "100%")
+                                                       ),
+                                                       column(6,
+                                                         div(htmlOutput(ns("estimated_size")), style = "margin-left: 10px; margin-top: 32px;")
                                                        )
                                                      ),
 
