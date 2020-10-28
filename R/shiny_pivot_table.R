@@ -1006,25 +1006,25 @@ shinypivottablerUI <- function(id,
                                                        column(2,
                                                               div(id = ns("id_padding_1"), textInput(ns("label"), label = "Label", value = "Auto", width  = "100%"))
                                                        ),
-                                                       column(4,
+                                                       column(6,
                                                               fluidRow(
-                                                                column(6,
+                                                                column(8,
                                                                        selectInput(ns("target"), label = "Selected target",
                                                                                    choices = NULL, width = "100%")
                                                                 ),
-                                                                column(6,
-                                                                       selectInput(ns("idc"), label = "Selected indicator",
+                                                                column(4,
+                                                                       selectInput(ns("idc"), label = "Indicator",
                                                                                    choices = NULL, width = "100%")
                                                                 )
                                                               ),
                                                               conditionalPanel(condition = paste0("input['", ns("combine"), "'] !== 'None'"),
                                                                                fluidRow(
-                                                                                 column(6,
+                                                                                 column(8,
                                                                                         selectInput(ns("combine_target"), label = "Selected target",
                                                                                                     choices = NULL, width = "100%")
                                                                                  ),
-                                                                                 column(6,
-                                                                                        selectInput(ns("combine_idc"), label = "Selected indicator",
+                                                                                 column(4,
+                                                                                        selectInput(ns("combine_idc"), label = "Indicator",
                                                                                                     NULL, width = "100%")
                                                                                  )
                                                                                )
@@ -1034,11 +1034,11 @@ shinypivottablerUI <- function(id,
                                                               div(id = ns("id_padding_2"), selectInput(ns("combine"), label = "Combine",
                                                                                                        NULL, width = "100%"))
                                                        ),
-                                                       column(2,
-                                                              div(id = ns("id_padding_3"), actionButton(ns("specify_format"), label = "Specify format", width = "100%"), style = "margin-top: 25px")
+                                                       column(1,
+                                                              div(id = ns("id_padding_3"), actionButton(ns("specify_format"), label = "", icon = icon("paint-brush"), width = "100%"), style = "margin-top: 25px")
                                                        ),
-                                                       column(2,
-                                                              div(id = ns("id_padding_4"), actionButton(ns("add_idc"), label = "Add indicator", width = "100%"), align = "center", style = "margin-top: 25px")
+                                                       column(1,
+                                                              div(id = ns("id_padding_4"), actionButton(ns("add_idc"), label = "", icon = icon("plus"), width = "100%"), align = "center", style = "margin-top: 25px")
                                                        )
                                                      )
                                             )
