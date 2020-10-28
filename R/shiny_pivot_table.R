@@ -515,7 +515,7 @@ shinypivottabler <- function(input, output, session,
           fluidRow(
             column(3,
                    div(checkboxInput(ns(paste0("idc_name_box_", index)), label = "",
-                                     value = ifelse(length(idcs()) < index + 1, T, input[[paste0("idc_name_box_", index)]])), style = "margin-top: -12px; margin-bottom: -10px; margin-left: 2px;"),
+                                     value = ifelse(length(idcs()) < index + 1, T, input[[paste0("idc_name_box_", index)]])), style = "margin-top: -12px; margin-bottom: -10px; margin-left: 2px;")
             ),
             column(9,
                    div(textOutput(ns(paste0("idc_name_", index)), container = span), style = "margin-bottom: -10px; margin-left: -20%;")
@@ -911,7 +911,7 @@ shinypivottablerUI <- function(id,
                                       ),
                                       column(2,
                                              div(id = ns("id_padding_4"), actionButton(ns("add_idc"), label = "Add indicator", width = "100%"), align = "center", style = "margin-top: 25px")
-                                      ),
+                                      )
                                     )
                            )
                     )
@@ -945,7 +945,8 @@ shinypivottablerUI <- function(id,
                                      )
                     ),
                     conditionalPanel(condition = paste0("! output['", ns("is_pivottable"), "']"),
-                                     div(h3("No data to display"), align = "center"), style = paste0("color: ", app_colors[2], ";"))
+                                     div(h3("No data to display"), align = "center", style = paste0("color: ", app_colors[2], ";"))
+                    )
              )
     )
   )
