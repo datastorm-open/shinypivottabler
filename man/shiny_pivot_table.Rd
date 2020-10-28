@@ -5,23 +5,14 @@
 \alias{shinypivottablerUI}
 \title{Shiny module to render and export pivot tables.}
 \usage{
-shinypivottabler(
-  input,
-  output,
-  session,
-  data,
-  pivot_cols = NULL,
-  indicator_cols = NULL,
-  additional_expr_num = list(),
-  additional_expr_char = list(),
-  additional_combine = list(),
-  theme = NULL,
-  export_styles = TRUE,
-  show_title = TRUE,
-  initialization = NULL
-)
+shinypivottabler(input, output, session, data, pivot_cols = NULL,
+  indicator_cols = NULL, max_n_pivot_cols = 100,
+  additional_expr_num = list(), additional_expr_char = list(),
+  additional_combine = list(), theme = NULL, export_styles = TRUE,
+  show_title = TRUE, initialization = NULL)
 
-shinypivottablerUI(id, app_colors = c("#59bb28", "#217346"), app_linewidth = 8)
+shinypivottablerUI(id, app_colors = c("#59bb28", "#217346"),
+  app_linewidth = 8)
 }
 \arguments{
 \item{input}{shiny input}
@@ -35,6 +26,8 @@ shinypivottablerUI(id, app_colors = c("#59bb28", "#217346"), app_linewidth = 8)
 \item{pivot_cols}{\code{character} (NULL). Columns to be used as pivot in rows and cols.}
 
 \item{indicator_cols}{\code{character} (NULL). Columns on which indicators will be calculated.}
+
+\item{max_n_pivot_cols}{\code{numeric} (100). Maximum unique values for a \code{pivot_cols} if pivot_cols = NULL}
 
 \item{additional_expr_num}{\code{named list} (list()). Additional computations to be allowed for quantitative vars.}
 
