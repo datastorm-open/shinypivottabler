@@ -689,7 +689,7 @@ shinypivottabler <- function(input, output, session,
                                      value = if (length(idcs()) < index + 1) {T} else {! is.null(get_initialization()) || input[[paste0("idc_name_box_", index)]]}), style = "margin-top: -12px; margin-bottom: -10px; margin-left: 2px;")
             ),
             column(9,
-                   div(textOutput(ns(paste0("idc_name_", index)), container = span), style = "margin-bottom: -10px; margin-left: -20%;")
+                   div(textOutput(ns(paste0("idc_name_", index)), container = span), style = "font-size:12px; margin-bottom: -10px; margin-left: -20%;")
             ),
             extract_bsPopover(id = ns(paste0("idc_name_", index)),
                               title = paste0("<b>", indicators[[index]][["label"]], "</b>"),
