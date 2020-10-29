@@ -391,6 +391,9 @@ shinypivottabler <- function(input, output, session,
     trigger_initialization()
 
     isolate({
+
+      req(target)
+
       initialization <- get_initialization()
 
       if (is.null(get_data()[[target]]) || is.numeric(get_data()[[target]])) {
@@ -418,6 +421,7 @@ shinypivottabler <- function(input, output, session,
     trigger_initialization()
 
     isolate({
+
       indicator_cols <- get_indicator_cols()
       initialization <- get_initialization()
 
@@ -571,18 +575,24 @@ shinypivottabler <- function(input, output, session,
   })
   outputOptions(output, "is_idcs", suspendWhenHidden = FALSE)
 
-  observeEvent(input$reset_table || is.null(get_data()), {
+  observe({
+    req(input$reset_table)
+    req(get_data())
+
+    input$reset_table
+    is.null(get_data())
 
     isolate({
       idcs(list())
       store_pt(NULL)
     })
-  }, ignoreInit = TRUE, ignoreNULL = TRUE)
+  })
 
   observe({
     cpt <- input$add_idc
 
     isolate({
+
       if (! is.null(cpt) && cpt > 0 && ! is.null(input$target) && input$target != "" &&
           (! is.null(input$combine) && input$combine == "None" || (! is.null(input$combine_target) && input$combine_target != ""))) {
 
@@ -853,6 +863,7 @@ shinypivottabler <- function(input, output, session,
     cpt_cancel <- input$theme_cancel
 
     isolate({
+
       if (! is.null(cpt_valid) && ! is.null(cpt_cancel) && (cpt_valid > 0 || cpt_cancel > 0)) {
         if (cpt_valid > 0) {
           theme <- get_theme()
