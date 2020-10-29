@@ -987,12 +987,10 @@ shinypivottablerUI <- function(id,
     tags$head(
       tags$style(HTML("
         div.combine_padding { padding-top: 35px; }
-        "))),
-    tags$head(
-      tags$style("
-        .btn { width: 100%; }
-      ")
+        ")
+      )
     ),
+
 
     conditionalPanel(condition = paste0("output['", ns("ui_have_data"), "']"),
                      fluidRow(style = "padding-left: 1%; padding-right: 1%;",
