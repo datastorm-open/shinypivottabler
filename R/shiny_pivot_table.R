@@ -331,7 +331,9 @@ shinypivottabler <- function(input, output, session,
     cols <- input$cols
 
     isolate({
-      paste0("<b>Estimated size : ", ifelse(is.null(rows), 1, Reduce("*", ctrl_var_len()[rows])), "</b> rows  x  <b>", ifelse(is.null(cols), 1, Reduce("*", ctrl_var_len()[cols])), "</b> colums")
+      paste0("<b>Estimated size : ", ifelse(is.null(rows), 1, Reduce("*", ctrl_var_len()[rows])),
+             "</b> rows  x  <b>",
+             ifelse(is.null(cols), 1, Reduce("*", ctrl_var_len()[cols])), "</b> colums x indicators + <b> Subtotals </b>")
     })
   })
 
@@ -572,8 +574,8 @@ shinypivottabler <- function(input, output, session,
   observeEvent(input$reset_table || is.null(get_data()), {
 
     isolate({
-        idcs(list())
-        store_pt(NULL)
+      idcs(list())
+      store_pt(NULL)
     })
   }, ignoreInit = TRUE, ignoreNULL = TRUE)
 
@@ -705,13 +707,13 @@ shinypivottabler <- function(input, output, session,
 
     isolate({
       idcs <- isolate(idcs())
-      data <- copy(isolate(get_data()))
-      names(data) <- gsub("[[:punct:]| ]", "_", names(data))
+      data <- isolate(get_data())
       initialization <- get_initialization()
 
       if (! is.null(data) && (((! is.null(cpt) && cpt > 0 && ! is.null(idcs)) || ! is.null(initialization)) && length(idcs) > 0)) {
         shiny::withProgress(message = 'Creating the table...', value = 0.5, {
 
+          names(data) <- gsub("[[:punct:]| ]", "_", names(data))
           pt <- pivottabler::PivotTable$new()
           pt$addData(data)
 
@@ -1012,7 +1014,7 @@ shinypivottablerUI <- function(id,
                                                                           choices = NULL, multiple = T, width = "100%")
                                                        ),
                                                        column(6,
-                                                         div(htmlOutput(ns("estimated_size")), style = "margin-left: 10px; margin-top: 32px;")
+                                                              div(htmlOutput(ns("estimated_size")), style = "margin-left: 10px; margin-top: 32px;")
                                                        )
                                                      ),
 
@@ -1051,10 +1053,16 @@ shinypivottablerUI <- function(id,
                                                                                                        NULL, width = "100%"))
                                                        ),
                                                        column(1,
-                                                              div(id = ns("id_padding_3"), actionButton(ns("specify_format"), label = "", icon = icon("paint-brush"), width = "100%"), style = "margin-top: 25px")
+                                                              div(id = ns("id_padding_3"),
+                                                                  actionButton(ns("specify_format"), label = "", icon = icon("paint-brush"), width = "100%"),
+                                                                  style = "margin-top: 25px"
+                                                              )
                                                        ),
                                                        column(1,
-                                                              div(id = ns("id_padding_4"), actionButton(ns("add_idc"), label = "", icon = icon("plus"), width = "100%"), align = "center", style = "margin-top: 25px")
+                                                              div(id = ns("id_padding_4"),
+                                                                  actionButton(ns("add_idc"), label = "", icon = icon("plus"), width = "100%"),
+                                                                  align = "center", style = "margin-top: 25px"
+                                                              )
                                                        )
                                                      )
                                             )
