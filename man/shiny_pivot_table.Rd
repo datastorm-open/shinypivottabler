@@ -5,14 +5,24 @@
 \alias{shinypivottablerUI}
 \title{Shiny module to render and export pivot tables.}
 \usage{
-shinypivottabler(input, output, session, data, pivot_cols = NULL,
-  indicator_cols = NULL, max_n_pivot_cols = 100,
-  additional_expr_num = list(), additional_expr_char = list(),
-  additional_combine = list(), theme = NULL, export_styles = TRUE,
-  show_title = TRUE, initialization = NULL)
+shinypivottabler(
+  input,
+  output,
+  session,
+  data,
+  pivot_cols = NULL,
+  indicator_cols = NULL,
+  max_n_pivot_cols = 100,
+  additional_expr_num = list(),
+  additional_expr_char = list(),
+  additional_combine = list(),
+  theme = NULL,
+  export_styles = TRUE,
+  show_title = TRUE,
+  initialization = NULL
+)
 
-shinypivottablerUI(id, app_colors = c("#59bb28", "#217346"),
-  app_linewidth = 8)
+shinypivottablerUI(id, app_colors = c("#59bb28", "#217346"), app_linewidth = 8)
 }
 \arguments{
 \item{input}{shiny input}
@@ -41,6 +51,24 @@ shinypivottablerUI(id, app_colors = c("#59bb28", "#217346"),
 
 \item{show_title}{\code{boolean} (TRUE). Whether or not to display the app title.
 Some styles may not be supported by Excel.}
+
+\item{initialization}{\code{named list} (NULL). Initialization parameters to display a table when launching the module.
+Available fields are :
+\itemize{
+ \item{\code{rows:}}{ Selected pivot rows.}
+ \item{\code{cols:}}{ Selected pivot columns.}
+ \item{\code{target, combine target:}} { Selected target and combine_target columns.}.
+ \item{\code{idc, combine_idc:}}{ Selected idc and combine_idc columns.}
+ \item{\code{combine:}}{ Selected combine operator.}
+ \item{\code{format_digit, format_prefix, format_suffix, format_sep_thousands, format_decimal:}}{ Selected formats for the table idc.}
+ \item{\code{idcs:}}{ idcs to be displayed (list of named list), see the example to get the fields.}
+}}
+
+\item{id}{\code{character}. An ID string}
+
+\item{app_colors}{\code{character}. Vector of two colors c("#59bb28", "#217346") (borders)}
+
+\item{app_linewidth}{\code{numeric}. Borders width}
 }
 \value{
 Nothing. Starts a Shiny module.
@@ -54,17 +82,21 @@ Shiny module to render and export pivot tables.
 require(shinypivottabler)
 require(shiny)
 
+# demo app
+runApp(system.file("demo_app", package = "shinypivottabler"))
+
 # create artificial dataset
-data <- data.frame("V1" = sample(c("A", "B", "C", "D"), size = 1000000,
+n <- 1000000
+data <- data.frame("gr1" = sample(c("A", "B", "C", "D"), size = n,
                                  prob = rep(1, 4), replace = T),
-                   "V2" = sample(c("E", "F", "G", "H"), size = 1000000,
+                   "gr2" = sample(c("E", "F", "G", "H"), size = n,
                                  prob = rep(1, 4), replace = T),
-                   "V3" = sample(c("I", "J", "K", "L"), size = 1000000,
+                   "gr3" = sample(c("I", "J", "K", "L"), size = n,
                                  prob = rep(1, 4), replace = T),
-                   "V4" = sample(c("M", "N", "O", "P"), size = 1000000,
+                   "gr4" = sample(c("M", "N", "O", "P"), size = n,
                                  prob = rep(1, 4), replace = T),
-                   "V5" = 1:1000000,
-                   "V6" = 1000000:1)
+                   "value1" = 1:n,
+                   "value2" = n:1)
 
 # Minimal example
 
@@ -85,28 +117,31 @@ shiny::shinyApp(ui = ui, server = server)
 # Complete example
 
 initialization <- list(
-  "rows" = "V1",
-  "cols" = "V2",
-  "target" = "V3",
-  "combine_target" = "V4",
+  "rows" = "gr1",
+  "cols" = "gr2",
+  "target" = "gr3",
+  "combine_target" = "gr4",
   "idc" = "Count",
   "combine_idc" = "Count",
   "combine" = "/",
-  "idcs" = c(list(c("label" = "Init_variable_1",
-                  "target" = "V3", "idc" = "Count",
-                  "nb_decimals" = 0,
-                  "sep_thousands" = " ",
-                  "sep_decimal" = ".",
-                  "prefix" = "",
-                  "suffix" = "",
-                  "combine" = "/", "combine_target" = "V4", "combine_idc" = "Count")),
-               list(c("label" = "Init_variable_2",
-                  "target" = "V3", "idc" = "Count",
-                  "nb_decimals" = 0,
-                  "sep_thousands" = " ",
-                  "sep_decimal" = ".",
-                  "prefix" = "",
-                  "suffix" = "")))
+  "idcs" = c(
+      list(
+        c("label" = "Init_variable_1",
+          "target" = "gr3", "idc" = "Count",
+          "nb_decimals" = 0,
+          "sep_thousands" = " ",
+          "sep_decimal" = ".",
+          "prefix" = "",
+          "suffix" = "",
+          "combine" = "/",
+          "combine_target" = "gr4",
+          "combine_idc" = "Count")
+       ),
+       list(
+         c("label" = "Init_variable_2",
+           "target" = "gr3", "idc" = "Count")
+       )
+     )
 )
 
 theme <- list(
@@ -136,7 +171,7 @@ server = function(input, output, session) {
   shiny::callModule(module = shinypivottabler,
                     id = "id",
                     data = data,
-                    pivot_cols = c("V1", "V2", "V3", "V4"),
+                    pivot_cols = c("gr1", "gr2", "gr3", "gr4"),
                     additional_expr_num = list(
                       "Add_median" = "paste0('median(as.numeric(', target, '), na.rm = TRUE)')"
                     ),

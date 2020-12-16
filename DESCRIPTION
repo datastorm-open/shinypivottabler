@@ -1,6 +1,6 @@
 Package: shinypivottabler
 Title: Shiny pivot tables
-Version: 0.1.0.0
+Version: 0.1.0.1
 Authors@R: c(
     person("Benoit", "Thieurmel", email = "benoit.thieurmel@datastorm.fr", role = c("aut", "cre")),
     person("Thibaut", "Dubois", email = "thibaut.dubois@datastorm.fr", role = c("aut"))

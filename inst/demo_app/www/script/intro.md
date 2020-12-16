@@ -55,26 +55,24 @@ runApp(system.file("demo_app", package = "shinypivottabler"))
 ``` r
 require(shinypivottabler)
 
-n <- 10000000
-
 # create artificial dataset
-data <- data.frame("gr1" = sample(c("A", "B", "C", "D"), size = n,
+data <- data.frame("V1" = sample(c("A", "B", "C", "D"), size = 1000000,
                                  prob = rep(1, 4), replace = T),
-                   "gr2" = sample(c("E", "F", "G", "H"), size = n,
+                   "V2" = sample(c("E", "F", "G", "H"), size = 1000000,
                                  prob = rep(1, 4), replace = T),
-                   "gr3" = sample(c("I", "J", "K", "L"), size = n,
+                   "V3" = sample(c("I", "J", "K", "L"), size = 1000000,
                                  prob = rep(1, 4), replace = T),
-                   "gr4" = sample(c("M", "N", "O", "P"), size = n,
+                   "V4" = sample(c("M", "N", "O", "P"), size = 1000000,
                                  prob = rep(1, 4), replace = T),
-                   "value1" = rnorm(n),
-                   "value2" = runif(n))
+                   "V5" = 1:1000000,
+                   "V6" = 1000000:1)
 
 
 server = function(input, output, session) {
   shiny::callModule(module = shinypivottabler,
                     id = "id",
                     data = data,
-                    pivot_cols = c("gr1", "gr2", "gr3", "gr4"))
+                    pivot_cols = c("V1", "V2", "V3", "V4"))
 }
 
 ui = shiny::fluidPage(
@@ -90,12 +88,12 @@ shiny::shinyApp(ui = ui, server = server)
 
 - Define your pivot table
 
-![](inst/demo_app/www/figures/init_module.PNG)
+![img](figures/init_module.PNG)
 
 - Visualize & export
 
-![](inst/demo_app/www/figures/view_table.PNG)
+![img](figures/view_table.PNG)
 
 - Customize
 
-![](inst/demo_app/www/figures/theme.PNG)
+![img](figures/theme.PNG)

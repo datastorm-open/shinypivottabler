@@ -10,11 +10,11 @@ get_expr <- function(idc, target, additional_expr) {
     list(
       "Count" = "'n()'",
       "Count_distinct" = "paste0('n_distinct(', target, ', na.rm = TRUE)')",
-      "Sum" = "paste0('sum(as.numeric(', target, '), na.rm = TRUE)')",
-      "Mean" = "paste0('mean(as.numeric(', target, '), na.rm = TRUE)')",
-      "Min" = "paste0('min(as.numeric(', target, '), na.rm = TRUE)')",
-      "Max" = "paste0('max(as.numeric(', target, '), na.rm = TRUE)')",
-      "Standard_deviation" = "paste0('sd(as.numeric(', target, '), na.rm = TRUE)')"
+      "Sum" = "paste0('sum(', target, ', na.rm = TRUE)')",
+      "Mean" = "paste0('mean(', target, ', na.rm = TRUE)')",
+      "Min" = "paste0('min(', target, ', na.rm = TRUE)')",
+      "Max" = "paste0('max(', target, ', na.rm = TRUE)')",
+      "Standard_deviation" = "paste0('sd(', target, ', na.rm = TRUE)')"
     ),
     additional_expr)
 
@@ -28,6 +28,9 @@ get_expr <- function(idc, target, additional_expr) {
 #' @param input shiny input
 #' @param output shiny input
 #' @param session shiny input
+#' @param id \code{character}. An ID string
+#' @param app_colors \code{character}. Vector of two colors c("#59bb28", "#217346") (borders)
+#' @param app_linewidth \code{numeric}. Borders width
 #' @param data \code{data.frame} / \code{data.table}. Initial data table.
 #' @param pivot_cols \code{character} (NULL). Columns to be used as pivot in rows and cols.
 #' @param max_n_pivot_cols \code{numeric} (100). Maximum unique values for a \code{pivot_cols} if pivot_cols = NULL
@@ -44,7 +47,7 @@ get_expr <- function(idc, target, additional_expr) {
 #'\itemize{
 #'  \item{\code{rows:}}{ Selected pivot rows.}
 #'  \item{\code{cols:}}{ Selected pivot columns.}
-#'  \item{\code{target, combine target:} { Selected target and combine_target columns.}.
+#'  \item{\code{target, combine target:}} { Selected target and combine_target columns.}.
 #'  \item{\code{idc, combine_idc:}}{ Selected idc and combine_idc columns.}
 #'  \item{\code{combine:}}{ Selected combine operator.}
 #'  \item{\code{format_digit, format_prefix, format_suffix, format_sep_thousands, format_decimal:}}{ Selected formats for the table idc.}
@@ -65,17 +68,21 @@ get_expr <- function(idc, target, additional_expr) {
 #' require(shinypivottabler)
 #' require(shiny)
 #'
+#' # demo app
+#' runApp(system.file("demo_app", package = "shinypivottabler"))
+#'
 #' # create artificial dataset
-#' data <- data.frame("V1" = sample(c("A", "B", "C", "D"), size = 1000000,
+#' n <- 1000000
+#' data <- data.frame("gr1" = sample(c("A", "B", "C", "D"), size = n,
 #'                                  prob = rep(1, 4), replace = T),
-#'                    "V2" = sample(c("E", "F", "G", "H"), size = 1000000,
+#'                    "gr2" = sample(c("E", "F", "G", "H"), size = n,
 #'                                  prob = rep(1, 4), replace = T),
-#'                    "V3" = sample(c("I", "J", "K", "L"), size = 1000000,
+#'                    "gr3" = sample(c("I", "J", "K", "L"), size = n,
 #'                                  prob = rep(1, 4), replace = T),
-#'                    "V4" = sample(c("M", "N", "O", "P"), size = 1000000,
+#'                    "gr4" = sample(c("M", "N", "O", "P"), size = n,
 #'                                  prob = rep(1, 4), replace = T),
-#'                    "V5" = 1:1000000,
-#'                    "V6" = 1000000:1)
+#'                    "value1" = 1:n,
+#'                    "value2" = n:1)
 #'
 #' # Minimal example
 #'
@@ -96,28 +103,31 @@ get_expr <- function(idc, target, additional_expr) {
 #' # Complete example
 #'
 #' initialization <- list(
-#'   "rows" = "V1",
-#'   "cols" = "V2",
-#'   "target" = "V3",
-#'   "combine_target" = "V4",
+#'   "rows" = "gr1",
+#'   "cols" = "gr2",
+#'   "target" = "gr3",
+#'   "combine_target" = "gr4",
 #'   "idc" = "Count",
 #'   "combine_idc" = "Count",
 #'   "combine" = "/",
-#'   "idcs" = c(list(c("label" = "Init_variable_1",
-#'                   "target" = "V3", "idc" = "Count",
-#'                   "nb_decimals" = 0,
-#'                   "sep_thousands" = " ",
-#'                   "sep_decimal" = ".",
-#'                   "prefix" = "",
-#'                   "suffix" = "",
-#'                   "combine" = "/", "combine_target" = "V4", "combine_idc" = "Count")),
-#'                list(c("label" = "Init_variable_2",
-#'                   "target" = "V3", "idc" = "Count",
-#'                   "nb_decimals" = 0,
-#'                   "sep_thousands" = " ",
-#'                   "sep_decimal" = ".",
-#'                   "prefix" = "",
-#'                   "suffix" = "")))
+#'   "idcs" = c(
+#'       list(
+#'         c("label" = "Init_variable_1",
+#'           "target" = "gr3", "idc" = "Count",
+#'           "nb_decimals" = 0,
+#'           "sep_thousands" = " ",
+#'           "sep_decimal" = ".",
+#'           "prefix" = "",
+#'           "suffix" = "",
+#'           "combine" = "/",
+#'           "combine_target" = "gr4",
+#'           "combine_idc" = "Count")
+#'        ),
+#'        list(
+#'          c("label" = "Init_variable_2",
+#'            "target" = "gr3", "idc" = "Count")
+#'        )
+#'      )
 #' )
 #'
 #' theme <- list(
@@ -147,7 +157,7 @@ get_expr <- function(idc, target, additional_expr) {
 #'   shiny::callModule(module = shinypivottabler,
 #'                     id = "id",
 #'                     data = data,
-#'                     pivot_cols = c("V1", "V2", "V3", "V4"),
+#'                     pivot_cols = c("gr1", "gr2", "gr3", "gr4"),
 #'                     additional_expr_num = list(
 #'                       "Add_median" = "paste0('median(as.numeric(', target, '), na.rm = TRUE)')"
 #'                     ),
