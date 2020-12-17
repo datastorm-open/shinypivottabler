@@ -407,18 +407,18 @@ shinypivottabler <- function(input, output, session,
       initialization <- get_initialization()
 
       if (is.null(get_data()[[target]]) || is.numeric(get_data()[[target]])) {
-        choices <- c(
+        choices <- c(sort(
           c("Count", "Count distinct", "Sum", "Mean", "Min", "Max", "Standard deviation"),
           names(get_additional_expr_num())
-        )
+        ))
         updateSelectInput(session = session, "idc",
                           choices = choices,
                           selected = if (is.null(initialization$idc)) {ifelse(input$idc %in% choices, input$idc, "Count")} else {initialization$idc})
       } else if (is.character(get_data()[[target]]) || is.factor(get_data()[[target]])) {
-        choices <- c(
+        choices <- c(sort(
           c("Count", "Count distinct"),
           names(get_additional_expr_char())
-        )
+        ))
         updateSelectInput(session = session, "idc",
                           choices = choices,
                           selected = if (is.null(initialization$idc)) {ifelse(input$idc %in% choices, input$idc, "Count")} else {initialization$idc})
@@ -459,18 +459,18 @@ shinypivottabler <- function(input, output, session,
       initialization <- get_initialization()
 
       if (is.null(combine_target) || is.null(get_data()[[combine_target]]) || is.numeric(get_data()[[combine_target]])) {
-        choices <- c(
+        choices <- c(sort(
           c("Count", "Count distinct", "Sum", "Mean", "Min", "Max", "Standard deviation"),
           names(get_additional_expr_num())
-        )
+        ))
         updateSelectInput(session = session, "combine_idc",
                           choices = choices,
                           selected = if (is.null(initialization$combine_idc)) {ifelse(input$combine_idc %in% choices, input$combine_idc, "Count")} else {initialization$combine_idc})
       } else if (is.character(get_data()[[combine_target]]) || is.factor(get_data()[[combine_target]])) {
-        choices <- c(
+        choices <- c(sort(
           c("Count", "Count distinct"),
           names(get_additional_expr_char())
-        )
+        ))
         updateSelectInput(session = session, "combine_idc",
                           choices = choices,
                           selected = if (is.null(initialization$combine_idc)) {ifelse(input$combine_idc %in% choices, input$combine_idc, "Count")} else {initialization$combine_idc})

@@ -10,7 +10,7 @@ The `pivottabler` package aims to:
 
 **All calculations for the pivot tables take place inside R, enabling the use of a wide-range of R functions in the calculation logic, and are optimized with the use of packages dplyr & data.table**
 
-`shinypivottabler` just add a simple and usefull Shiny module to build, visualize, customize and export custom pivot table.
+`shinypivottabler` just adds a simple and useful Shiny module to build, visualize, customize and export custom pivot tables.
 
 ### shinypivottabler vs rpivotTable ?
 

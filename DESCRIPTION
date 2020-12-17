@@ -5,7 +5,7 @@ Authors@R: c(
     person("Benoit", "Thieurmel", email = "benoit.thieurmel@datastorm.fr", role = c("aut", "cre")),
     person("Thibaut", "Dubois", email = "thibaut.dubois@datastorm.fr", role = c("aut"))
     )
-Description: Shiny Module to create, cisualize, customize and export Excel-like pivot table.
+Description: Shiny Module to create, visualize, customize and export Excel-like pivot table.
 License: GPL-3 
 Encoding: UTF-8
 Depends: R (>= 3.4)
