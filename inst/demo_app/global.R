@@ -2,7 +2,7 @@ library(shiny)
 library(shinypivottabler)
 library(pivottabler)
 library(data.table)
-
+library(rmarkdown)
 
 data <- data.table(bhmtrains)
 
