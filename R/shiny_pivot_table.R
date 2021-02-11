@@ -14,6 +14,8 @@ get_expr <- function(idc, target, additional_expr) {
       "Mean" = "paste0('mean(', target, ', na.rm = TRUE)')",
       "Min" = "paste0('min(', target, ', na.rm = TRUE)')",
       "Max" = "paste0('max(', target, ', na.rm = TRUE)')",
+      "Median" = "paste0('median(', target, ', na.rm = TRUE)')",
+      "Variance" = "paste0('var(', target, ', na.rm = TRUE)')",
       "Standard_deviation" = "paste0('sd(', target, ', na.rm = TRUE)')"
     ),
     additional_expr)
@@ -54,7 +56,7 @@ get_expr <- function(idc, target, additional_expr) {
 #'  \item{\code{idcs:}}{ idcs to be displayed (list of named list), see the example to get the fields.}
 #'}
 #'
-#' @return Nothing. Starts a Shiny module.
+#' @return Nothing. Just Start a Shiny module.
 #'
 #' @import pivottabler shiny openxlsx
 #' @importFrom colourpicker colourInput
@@ -148,7 +150,7 @@ get_expr <- function(idc, target, additional_expr) {
 #'   shinypivottablerUI(id = "id")
 #' )
 #'
-#' # we add two functions, one for quantitative variables (the median) and
+#' # we add two functions, one for quantitative variables (Q5) and
 #' # one for qualitatives variables (the mode, with a custom function), and
 #' # one possible combination (the modulo).
 #' my_mode <- function(x) names(which.max(table(x)))
@@ -159,7 +161,7 @@ get_expr <- function(idc, target, additional_expr) {
 #'                     data = data,
 #'                     pivot_cols = c("gr1", "gr2", "gr3", "gr4"),
 #'                     additional_expr_num = list(
-#'                       "Add_median" = "paste0('median(as.numeric(', target, '), na.rm = TRUE)')"
+#'                       "Add_Q5" = "paste0('quantile(', target, ', probs = 0.05, na.rm = TRUE)')"
 #'                     ),
 #'                     additional_expr_char = list(
 #'                       "Add_mode" = "paste0('my_mode(', target, ')')"
@@ -408,7 +410,7 @@ shinypivottabler <- function(input, output, session,
 
       if (is.null(get_data()[[target]]) || is.numeric(get_data()[[target]])) {
         choices <- sort(c(
-          c("Count", "Count distinct", "Sum", "Mean", "Min", "Max", "Standard deviation"),
+          c("Count", "Count distinct", "Sum", "Mean", "Min", "Max", "Median", "Variance", "Standard deviation"),
           names(get_additional_expr_num())
         ))
         updateSelectInput(session = session, "idc",
@@ -460,7 +462,7 @@ shinypivottabler <- function(input, output, session,
 
       if (is.null(combine_target) || is.null(get_data()[[combine_target]]) || is.numeric(get_data()[[combine_target]])) {
         choices <- sort(c(
-          c("Count", "Count distinct", "Sum", "Mean", "Min", "Max", "Standard deviation"),
+          c("Count", "Count distinct", "Sum", "Mean", "Min", "Max", "Median", "Variance", "Standard deviation"),
           names(get_additional_expr_num())
         ))
         updateSelectInput(session = session, "combine_idc",
@@ -791,8 +793,22 @@ shinypivottabler <- function(input, output, session,
             }
           }
 
-          pt$evaluatePivot()
-          store_pt(pt)
+          ctrl <- tryCatch(pt$evaluatePivot(), error = function(e){
+            showModal(modalDialog(
+              title = "Error creating pivot table",
+              e$message,
+              easyClose = TRUE,
+              footer = NULL
+            ))
+            "error"
+          })
+
+          if(!isTRUE(all.equal(ctrl, "error"))){
+            store_pt(pt)
+          } else {
+            store_pt(NULL)
+          }
+
         })
       } else {
         store_pt(NULL)

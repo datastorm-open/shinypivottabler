@@ -162,7 +162,7 @@ ui = shiny::fluidPage(
   shinypivottablerUI(id = "id")
 )
 
-# we add two functions, one for quantitative variables (the median) and
+# we add two functions, one for quantitative variables (Q5) and
 # one for qualitatives variables (the mode, with a custom function), and
 # one possible combination (the modulo).
 my_mode <- function(x) names(which.max(table(x)))
@@ -173,7 +173,7 @@ server = function(input, output, session) {
                     data = data,
                     pivot_cols = c("gr1", "gr2", "gr3", "gr4"),
                     additional_expr_num = list(
-                      "Add_median" = "paste0('median(as.numeric(', target, '), na.rm = TRUE)')"
+                      "Add_Q5" = "paste0('quantile(', target, ', probs = 0.05, na.rm = TRUE)')"
                     ),
                     additional_expr_char = list(
                       "Add_mode" = "paste0('my_mode(', target, ')')"
