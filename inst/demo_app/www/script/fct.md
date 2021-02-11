@@ -1,6 +1,6 @@
 # New functions
 
-By default, you can compute ``Sum``, ``Mean``, ``Min``, ``Max``, ``Standard Deviation``, ``Count`` and ``Count Distinct`` on quantitative variables and only ``Count`` and ``Count Distinct`` on qualitative variables.
+By default, you can compute ``Sum``, ``Mean``, ``Min``, ``Max``, ``Standard Deviation`` ``Median`` & ``Variance``, ``Count`` and ``Count Distinct`` on quantitative variables and only ``Count`` and ``Count Distinct`` on qualitative variables.
 
 And you can combine two indicatos using ``+``, ``-``, ``*``, and ``/``.
 
@@ -14,7 +14,7 @@ It's possible to add new functions with ``additional_expr_num`` (quantitative), 
 ``` r
 
 additional_expr_num = list(
-  "Median" = "paste0('median(', target, ', na.rm = TRUE)')"
+  "Q5" = "paste0('quantile(', target, ', probs = 0.05, na.rm = TRUE)')"
 )
 
 getmode <- function(v) {
