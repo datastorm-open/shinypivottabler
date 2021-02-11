@@ -71,7 +71,7 @@ Available fields are :
 \item{app_linewidth}{\code{numeric}. Borders width}
 }
 \value{
-Nothing. Starts a Shiny module.
+Nothing. Just Start a Shiny module.
 }
 \description{
 Shiny module to render and export pivot tables.
