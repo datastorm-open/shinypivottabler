@@ -1,6 +1,6 @@
 Package: shinypivottabler
-Title: Shiny Pivot Tables
-Version: 0.1.0.1
+Title: Shiny Module to Create Pivot Tables
+Version: 1.0
 Authors@R: c(
     person("Benoit", "Thieurmel", email = "benoit.thieurmel@datastorm.fr", role = c("aut", "cre")),
     person("Thibaut", "Dubois", email = "thibaut.dubois@datastorm.fr", role = c("aut"))
