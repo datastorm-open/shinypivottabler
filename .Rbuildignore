@@ -1,0 +1,3 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+deploy_rsconnect.R

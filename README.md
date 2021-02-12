@@ -15,7 +15,7 @@ The `pivottabler` package aims to:
 ### shinypivottabler vs rpivotTable ?
 
 
-The [``rpivotTable``](https://github.com/smartinsightsfromdata/rpivotTable) package is an R [htmlwidget](http://htmlwidgets.org)  visualization library built around the Javascript [pivottable](http://nicolas.kruchten.com/pivottable/examples/)  library.
+The [``rpivotTable``](https://github.com/smartinsightsfromdata/rpivotTable) package is visualization library built around the Javascript [pivottable](https://pivottable.js.org/examples/) library.
 
 ``PivotTable.js`` is a Javascript Pivot Table library with drag'n'drop functionality built on top of jQuery/jQueryUI and  written in CoffeeScript  (then compiled to JavaScript) by Nicolas Kruchten at Datacratic. It is available under an MIT license
 

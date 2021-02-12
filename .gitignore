@@ -1,0 +1,7 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+inst/demo_app/rsconnect/*
+deploy_rsconnect.R
+*.Rproj
