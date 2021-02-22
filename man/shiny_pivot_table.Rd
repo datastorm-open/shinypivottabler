@@ -77,7 +77,7 @@ Nothing. Just Start a Shiny module.
 Shiny module to render and export pivot tables.
 }
 \examples{
-\dontrun{\donttest{
+\donttest{
 
 if (interactive()) {
 require(shinypivottabler)
@@ -187,5 +187,5 @@ server = function(input, output, session) {
 shiny::shinyApp(ui = ui, server = server)
 
 }
-}}
+}
 }
