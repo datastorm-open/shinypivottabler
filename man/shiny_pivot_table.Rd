@@ -79,6 +79,7 @@ Shiny module to render and export pivot tables.
 \examples{
 \dontrun{\donttest{
 
+if (interactive()) {
 require(shinypivottabler)
 require(shiny)
 
@@ -185,5 +186,6 @@ server = function(input, output, session) {
 
 shiny::shinyApp(ui = ui, server = server)
 
+}
 }}
 }

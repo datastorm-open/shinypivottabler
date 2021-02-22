@@ -67,6 +67,7 @@ get_expr <- function(idc, target, additional_expr) {
 #' @examples
 #' \dontrun{\donttest{
 #'
+#'if (interactive()) {
 #' require(shinypivottabler)
 #' require(shiny)
 #'
@@ -173,7 +174,8 @@ get_expr <- function(idc, target, additional_expr) {
 #'
 #' shiny::shinyApp(ui = ui, server = server)
 #'
-#' }}
+#'}
+#'}}
 shinypivottabler <- function(input, output, session,
                              data,
                              pivot_cols = NULL,
