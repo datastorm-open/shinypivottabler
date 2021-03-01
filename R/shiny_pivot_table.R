@@ -53,6 +53,7 @@ get_expr <- function(idc, target, additional_expr) {
 #'  \item{\code{idcs:}}{ idcs to be displayed (list of named list), see the example to get the fields.}
 #'}
 #' @param lan \code{character} ("en"). Langage.
+#' @param file_lan \code{data.frame, data.table} (NULL). Traductions table with at least column "en".
 #'
 #' @return Nothing. Just Start a Shiny module.
 #'
@@ -182,18 +183,29 @@ shinypivottabler <- function(input, output, session,
                              export_styles = TRUE,
                              show_title = TRUE,
                              initialization = NULL,
-                             lan = "en") {
+                             lan = "en",
+                             file_lan = NULL) {
   
   ns <- session$ns
+  
+  if (! shiny::is.reactive(file_lan)) {
+    get_file_lan <- shiny::reactive(file_lan)
+  } else {
+    get_file_lan <- file_lan
+  }
   
   # retrieve language file
   file_translate <- reactiveVal({
     isolate({
-      table_lan <- try(read.csv(system.file("language/language.csv", package = "shinypivottabler"),
-                                sep = ";",
-                                check.names=FALSE), silent = FALSE)
+      if (is.null(get_file_lan())) {
+        table_lan <- try(read.csv(system.file("language/language.csv", package = "shinypivottabler"),
+                                  sep = ";",
+                                  check.names=FALSE), silent = FALSE) 
+      } else {
+        table_lan <- get_file_lan()
+      }
       
-      if (class(lan) == "try-error") {
+      if (class(table_lan) == "try-error" || ! class(table_lan) %in% c("data.frame", "data.table") || ! ("en") %in% names(table_lan)) {
         table_lan <- data.frame("en" = c('None', 'Estimated size :', 'rows', 'columns', 'indicators', 'Subtotals', 'Count', 'Count distinct', 
                                          'Sum', 'Mean', 'Min', 'Max', 'Median', 'Variance', 'Standard deviation', 'Add', 'Substract', 'Multiply', 
                                          'Divise', 'Format the cells', 'Nb. decimals', 'Prefix (export only)', 'Suffix (export only)', 'Thousands sep', 
@@ -204,7 +216,7 @@ shinypivottabler <- function(input, output, session,
                                          'Selected columns', 'Label', 'Selected target', 'Display the table', 'Update theme', 'Reset table', 
                                          'Download table', 'No data to display'))
       }
-      
+    
       table_lan 
     })
   })
@@ -338,51 +350,26 @@ shinypivottabler <- function(input, output, session,
   })
   
   # maj text fields in ui
-  output$title_sel_idc <- renderText({
-    file_translate()[[get_lan()]][which(file_translate()[["en"]] == "Selected indicators")]
-  })
-  output$sel_rows <- renderUI({
-    selectInput(ns("rows"), label = file_translate()[[get_lan()]][which(file_translate()[["en"]] == "Selected rows")],
-                choices = NULL, multiple = T, width = "100%")
-  })
-  output$sel_cols <- renderUI({
-    selectInput(ns("cols"), label = file_translate()[[get_lan()]][which(file_translate()[["en"]] == "Selected columns")],
-                choices = NULL, multiple = T, width = "100%")
-  })
-  output$ui_label <- renderUI({
-    textInput(ns("label"), label = file_translate()[[get_lan()]][which(file_translate()[["en"]] == "Label")], value = file_translate()[[get_lan()]][which(file_translate()[["en"]] == "Auto")], width  = "100%")
-  })
-  output$ui_target <- renderUI({
-    selectInput(ns("target"), label = file_translate()[[get_lan()]][which(file_translate()[["en"]] == "Selected target")],
-                choices = NULL, width = "100%")
-  })
-  output$ui_indicator <- renderUI({
-    selectInput(ns("idc"), label = file_translate()[[get_lan()]][which(file_translate()[["en"]] == "Indicator")],
-                choices = NULL, width = "100%")
-  })
-  output$ui_combine_target <- renderUI({
-    selectInput(ns("combine_target"), label = file_translate()[[get_lan()]][which(file_translate()[["en"]] == "Selected target")],
-                choices = NULL, width = "100%")
-  })
-  output$ui_combine_idc <- renderUI({
-    selectInput(ns("combine_idc"), label = file_translate()[[get_lan()]][which(file_translate()[["en"]] == "Indicator")],
-                choices = NULL, width = "100%")
-  })
-  output$ui_combine <- renderUI({
-    selectInput(ns("combine"), label = file_translate()[[get_lan()]][which(file_translate()[["en"]] == "Combine")],
-                choices = NULL, width = "100%")
-  })
-  output$ui_go_table <- renderUI({
-    actionButton(ns("go_table"), label = file_translate()[[get_lan()]][which(file_translate()[["en"]] == "Display the table")], width = "100%")
-  })
-  output$ui_update_theme <- renderUI({
-    actionButton(ns("update_theme"), label = file_translate()[[get_lan()]][which(file_translate()[["en"]] == "Update theme")], width = "100%")
-  })
-  output$ui_reset_table <- renderUI({
-    actionButton(ns("reset_table"), label = file_translate()[[get_lan()]][which(file_translate()[["en"]] == "Reset table")], width = "100%")
+  observe({
+    updateSelectInput(session = session, "rows", label = file_translate()[[get_lan()]][which(file_translate()[["en"]] == "Selected rows")])
+    updateSelectInput(session = session, "cols", label = file_translate()[[get_lan()]][which(file_translate()[["en"]] == "Selected columns")])
+    updateTextInput(session = session, "label", label = file_translate()[[get_lan()]][which(file_translate()[["en"]] == "Label")], 
+                    value = file_translate()[[get_lan()]][which(file_translate()[["en"]] == "Auto")])
+    updateSelectInput(session = session, "target", label = file_translate()[[get_lan()]][which(file_translate()[["en"]] == "Selected target")])
+    updateSelectInput(session = session, "idc", label = file_translate()[[get_lan()]][which(file_translate()[["en"]] == "Indicator")])
+    updateSelectInput(session = session, "combine_target", label = file_translate()[[get_lan()]][which(file_translate()[["en"]] == "Selected target")])
+    updateSelectInput(session = session, "combine_idc", label = file_translate()[[get_lan()]][which(file_translate()[["en"]] == "Indicator")])
+    updateSelectInput(session = session, "combine", label = file_translate()[[get_lan()]][which(file_translate()[["en"]] == "Combine")])
+    updateActionButton(session = session, "go_table", label = file_translate()[[get_lan()]][which(file_translate()[["en"]] == "Display the table")])
+    updateActionButton(session = session, "update_theme", label = file_translate()[[get_lan()]][which(file_translate()[["en"]] == "Update theme")])
+    updateActionButton(session = session, "reset_table", label = file_translate()[[get_lan()]][which(file_translate()[["en"]] == "Reset table")])
+    
   })
   output$ui_export <- renderUI({
     downloadButton(ns("export"), label = file_translate()[[get_lan()]][which(file_translate()[["en"]] == "Download table")])
+  })
+  output$title_sel_idc <- renderText({
+    file_translate()[[get_lan()]][which(file_translate()[["en"]] == "Selected indicators")]
   })
   output$title_no_data_1 <- renderText({
     file_translate()[[get_lan()]][which(file_translate()[["en"]] == "No data to display")]
@@ -920,7 +907,7 @@ shinypivottabler <- function(input, output, session,
           
         })
       } else {
-        # store_pt(NULL)
+        # store_pt(NULL) 
       }
     })
   })
@@ -1138,10 +1125,12 @@ shinypivottablerUI <- function(id,
                                             fluidRow(style = "margin-left: 0px; margin-bottom: -15px;",
                                                      fluidRow(
                                                        column(3,
-                                                              uiOutput(ns("sel_rows"))
+                                                              selectInput(ns("rows"), label = "Selected rows",
+                                                                          choices = NULL, multiple = T, width = "100%")
                                                        ),
                                                        column(3,
-                                                              uiOutput(ns("sel_cols"))
+                                                              selectInput(ns("cols"), label = "Selected columns",
+                                                                          choices = NULL, multiple = T, width = "100%")
                                                        ),
                                                        column(6,
                                                               div(htmlOutput(ns("estimated_size")), style = "margin-left: 10px; margin-top: 32px;")
@@ -1152,30 +1141,37 @@ shinypivottablerUI <- function(id,
                                                      
                                                      fluidRow(
                                                        column(2,
-                                                              div(id = ns("id_padding_1"), uiOutput(ns("ui_label")))
+                                                              div(id = ns("id_padding_1"), textInput(ns("label"), label = "Label", 
+                                                                                                     value = "Auto", width  = "100%"))
                                                        ),
                                                        column(6,
                                                               fluidRow(
                                                                 column(8,
-                                                                       uiOutput(ns("ui_target"))
+                                                                       selectInput(ns("target"), label = "Selected target",
+                                                                                   choices = NULL, width = "100%")
                                                                 ),
                                                                 column(4,
-                                                                       uiOutput(ns("ui_indicator"))
+                                                                       selectInput(ns("idc"), label = "Indicator",
+                                                                                   choices = NULL, width = "100%")
                                                                 )
                                                               ),
                                                               conditionalPanel(condition = paste0("output['", ns("is_combine"), "']"),
                                                                                fluidRow(
                                                                                  column(8,
-                                                                                        uiOutput(ns("ui_combine_target"))
+                                                                                        selectInput(ns("combine_target"), label = "Selected target",
+                                                                                                    choices = NULL, width = "100%")
                                                                                  ),
                                                                                  column(4,
-                                                                                        uiOutput(ns("ui_combine_idc"))
+                                                                                        selectInput(ns("combine_idc"), label = "Indicator",
+                                                                                                    choices = NULL, width = "100%")
                                                                                  )
                                                                                )
                                                               )
                                                        ),
                                                        column(2,
-                                                              div(id = ns("id_padding_2"), uiOutput(ns("ui_combine")))
+                                                              div(id = ns("id_padding_2"), 
+                                                                  selectInput(ns("combine"), label = "Combine",
+                                                                              choices = NULL, width = "100%"))
                                                        ),
                                                        column(1,
                                                               div(id = ns("id_padding_3"),
@@ -1202,13 +1198,13 @@ shinypivottablerUI <- function(id,
                               column(12, style = paste0("padding: 2.5%; border-radius: 3px; border-top: ", app_linewidth, "px solid ", app_colors[1], "; border-bottom: ", app_linewidth, "px solid ", app_colors[2], "; border-left: ", app_linewidth, "px solid ", app_colors[1], "; border-right: ", app_linewidth, "px solid ", app_colors[2], ";"),
                                      fluidRow(
                                        column(4, offset = 1,
-                                              div(uiOutput(ns("ui_go_table")), align = "right")
+                                              div(actionButton(ns("go_table"), label = "Display the table", width = "100%"), align = "right")
                                        ),
                                        column(2,
-                                              div(uiOutput(ns("ui_update_theme")), align = "right")
+                                              div(actionButton(ns("update_theme"), label = "Update theme", width = "100%"), align = "right")
                                        ),
                                        column(4,
-                                              div(uiOutput(ns("ui_reset_table")), align = "left")
+                                              div(actionButton(ns("reset_table"), label = "Reset table", width = "100%"), align = "left")
                                        ),
                                        
                                        br(),
