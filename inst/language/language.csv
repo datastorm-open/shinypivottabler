@@ -1,0 +1,59 @@
+en;fr
+None;Aucun
+Estimated size :;Taille estimée :
+rows;lignes
+columns;colonnes
+indicators;indicateurs
+Subtotals;Sous-totaux
+Count;Compte
+Count distinct;Compte distinct
+Sum;Somme
+Mean;Moyenne
+Min;Min
+Max;Max
+Median;Médiane
+Variance;Variance
+Standard deviation;Ecart-type
+Add;Additionner
+Substract;Soustraire
+Multiply;Multiplier
+Divise;Diviser
+Format the cells;Mettre en forme les cellules
+Nb. decimals;Nb. décimales
+Prefix (export only);Prefixe (export)
+Suffix (export only);Suffixe (export)
+Thousands sep;Sep. des milliers
+Validate;Valider
+Cancel;Annuler
+Auto;Auto
+Target;Variable
+Indicator;Indicateur
+Combine;Combinaison
+Target 2;Variable 2
+Indicator 2;Indicateur 2
+Decimal sep;Sep. des décimales
+Prefix;Prefixe
+Suffix;Suffixe
+Creating the table...;Création du tableau…
+Error creating the pivot table;Erreur pendant la création du tableau
+Update the theme;Mettre à jour le thème
+Font name;Police
+Font size (em);Taille de la police (em)
+Header bg color;Couleur de l'arrière plan de l'en-tête
+Header text color;Couleur du texte de l'en-tête
+Cell bg color;Couleur de l'arrière plan des cellules
+Cell text color;Couleur du texte des cellules
+Total bg color;Couleur de l'arrière plan des totaux
+Total text color;Couleur du texte des totaux
+Border color;Couleur des bordures
+Preparing the export...;Préparation de l'export…
+Selected indicators;Indicateurs sélectionnés
+Selected rows;Lignes sélectionnées
+Selected columns;Colonnes sélectionnées
+Label;Label
+Selected target;Choix de la variable
+Display the table;Afficher le tableau
+Update theme;Modifier le thème
+Reset table;Réinitialiser le tableau
+Download table;Exporter le tableau
+No data to display;Pas de données à afficher

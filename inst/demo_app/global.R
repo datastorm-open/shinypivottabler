@@ -26,8 +26,6 @@ theme <- list(
   headerColor = "rgb(255, 255, 255)",
   cellBackgroundColor = "rgb(255, 255, 255)",
   cellColor = "rgb(0, 0, 0)",
-  outlineCellBackgroundColor = "rgb(192, 192, 192)",
-  outlineCellColor = "rgb(0, 0, 0)",
   totalBackgroundColor = "#e6e6e6",
   totalColor = "rgb(0, 0, 0)",
   borderColor = "#000000"
