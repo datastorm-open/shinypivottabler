@@ -544,7 +544,7 @@ shinypivottabler <- function(input, output, session,
           names(get_additional_expr_num())
         ))
         updateSelectInput(session = session, "combine_idc",
-                          choices = choices,
+                          choices = if (! is.null(initialization$combine_idc) || combine_target != "") {choices} else {NULL},
                           selected = if (is.null(initialization$combine_idc)) {ifelse(input$combine_idc %in% choices, input$combine_idc, "Count")} else {initialization$combine_idc})
       } else if (is.character(get_data()[[combine_target]]) || is.factor(get_data()[[combine_target]])) {
         choices <- sort(c(
@@ -1113,7 +1113,7 @@ shinypivottablerUI <- function(id,
                                               div(h4(HTML(paste0("<b>", textOutput(ns("title_sel_idc")), "</b>"))), align = "center", style = "padding-right: 12px;"),
                                               
                                               conditionalPanel(condition = paste0("output['", ns("is_idcs"), "']"),
-                                                               div(uiOutput(ns("selected_indicators")), style = "margin-top: 15px; overflow-y: auto; height: 130px; overflow-x: hidden; margin-right: 10px;")
+                                                               div(uiOutput(ns("selected_indicators")), style = "margin-top: 15px; overflow-y: auto; height: 140px; margin-bottom: 10px; overflow-x: hidden; margin-right: 10px;")
                                               ),
                                               conditionalPanel(condition = paste0("! output['", ns("is_idcs"), "']"),
                                                                div(h3(textOutput(ns("title_none"))), align = "center", style = paste0("padding-top: 20px; padding-right: 12px; color: ", app_colors[2], ";"))
