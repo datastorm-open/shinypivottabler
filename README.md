@@ -46,6 +46,12 @@ devtools::install_github("datastorm-open/shinypivottabler")
 
 ### Demo application
 
+*online*
+
+https://datastorm-demo.shinyapps.io/shinypivottabler/
+
+*local*
+
 ``` r
 runApp(system.file("demo_app", package = "shinypivottabler"))
 ```
