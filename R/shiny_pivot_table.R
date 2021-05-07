@@ -216,7 +216,7 @@ shinypivottabler <- function(input, output, session,
                                          'Selected columns', 'Label', 'Selected target', 'Display the table', 'Update theme', 'Reset table', 
                                          'Download table', 'No data to display'))
       }
-    
+      
       table_lan 
     })
   })
@@ -250,24 +250,29 @@ shinypivottabler <- function(input, output, session,
     have_data()
   })
   outputOptions(output, "ui_have_data", suspendWhenHidden = FALSE)
-  
+
   if (! shiny::is.reactive(pivot_cols)) {
-    get_pivot_cols <- shiny::reactive(pivot_cols)
+    piv_cols <- .check_cols(colnames(data), pivot_cols)
+    get_pivot_cols <- shiny::reactive(piv_cols)
   } else {
-    get_pivot_cols <- pivot_cols
+    piv_cols <- .check_cols(colnames(data), pivot_cols())
+    get_pivot_cols <- shiny::reactive(piv_cols)
   }
-  
+
   if (! shiny::is.reactive(indicator_cols)) {
-    get_indicator_cols <- shiny::reactive(indicator_cols)
+    ind_cols <- .check_cols(colnames(data), indicator_cols)
+    get_indicator_cols <- shiny::reactive(ind_cols)
   } else {
-    get_indicator_cols <- indicator_cols
+    ind_cols <- .check_cols(colnames(data), indicator_cols())
+    get_indicator_cols <- shiny::reactive(ind_cols)
   }
-  
+
   if (! shiny::is.reactive(max_n_pivot_cols)) {
     get_max_n_pivot_cols <- shiny::reactive(max_n_pivot_cols)
   } else {
     get_max_n_pivot_cols <- max_n_pivot_cols
   }
+  
   
   get_theme <- reactiveVal(NULL)
   observe({
@@ -343,9 +348,11 @@ shinypivottabler <- function(input, output, session,
   get_initialization <- reactiveVal(NULL)
   observe({
     if (! shiny::is.reactive(initialization)) {
-      get_initialization(initialization)
+      init <- .check_init(colnames(data), initialization, nulltoquote = T)
+      get_initialization(init)
     } else {
-      get_initialization(initialization())
+      init <- .check_init(colnames(data), initialization(), nulltoquote = T)
+      get_initialization(init)
     }
   })
   
@@ -392,8 +399,10 @@ shinypivottabler <- function(input, output, session,
     
     if (! is.null(idcs()) && length(idcs()) > 0) {
       toggleBtnSPivot(session = session, inputId = ns("go_table"), type = "enable")
+      toggleBtnSPivot(session = session, inputId = ns("save_config"), type = "enable")
     } else {
       toggleBtnSPivot(session = session, inputId = ns("go_table"), type = "disable")
+      toggleBtnSPivot(session = session, inputId = ns("save_config"), type = "disable")
     }
   })
   
@@ -423,7 +432,7 @@ shinypivottabler <- function(input, output, session,
     isolate({
       pivot_cols <- get_pivot_cols()
       initialization <- get_initialization()
-      
+
       if (is.null(pivot_cols)) {
         choices <- names(ctrl_var_len())[ctrl_var_len() <= get_max_n_pivot_cols()]
         
@@ -450,7 +459,7 @@ shinypivottabler <- function(input, output, session,
     isolate({
       indicator_cols <- get_indicator_cols()
       initialization <- get_initialization()
-      
+
       if (is.null(indicator_cols) && have_data()) {
         updateSelectInput(session = session, "target",
                           choices = c("", names(which(sapply(data, function(x) any(class(x) %in% c("logical", "numeric", "integer", "character", "factor")))))),
@@ -471,7 +480,7 @@ shinypivottabler <- function(input, output, session,
       req(target)
       
       initialization <- get_initialization()
-      
+
       if (is.null(get_data()[[target]]) || is.numeric(get_data()[[target]])) {
         choices <- sort(c(
           c(file_translate()[[get_lan()]][which(file_translate()[["en"]] == "Count")],
@@ -690,6 +699,27 @@ shinypivottabler <- function(input, output, session,
     })
   })
   
+  output$save_config <- shiny::downloadHandler(
+    filename = function() {
+      paste0(Sys.time(), "_config_shinypivottable", ".rds")
+    },
+    content = function(con) {
+      # config_path <- paste0(getwd(), "/", Sys.time(), "_config_shinypivottable", ".rds")
+      config <- list(
+        "rows" = input$rows,
+        "cols" = input$cols,
+        "target" = input$target,
+        "idc" = input$idc,
+        "combine_target" = input$combine_target,
+        "combine_idc" = input$combine_idc,
+        "combine" = input$combine,
+        "idcs" =  idcs()
+      )
+      # saveRDS(config, file = config_path)
+      saveRDS(config, file = con)
+    }
+  )
+  
   observe({
     cpt <- input$add_idc
     
@@ -827,7 +857,7 @@ shinypivottabler <- function(input, output, session,
           names(data) <- gsub("[[:punct:]| ]", "_", names(data))
           pt <- pivottabler::PivotTable$new()
           pt$addData(data)
-          
+
           # rows and columns
           rows <- if (is.null(initialization$rows)) {input$rows} else {initialization$rows}
           for (row in rows) {
@@ -1197,7 +1227,7 @@ shinypivottablerUI <- function(id,
                      fluidRow(style = "padding-left: 1%; padding-right: 1%;",
                               column(12, style = paste0("padding: 2.5%; border-radius: 3px; border-top: ", app_linewidth, "px solid ", app_colors[1], "; border-bottom: ", app_linewidth, "px solid ", app_colors[2], "; border-left: ", app_linewidth, "px solid ", app_colors[1], "; border-right: ", app_linewidth, "px solid ", app_colors[2], ";"),
                                      fluidRow(
-                                       column(4, offset = 1,
+                                       column(4,
                                               div(actionButton(ns("go_table"), label = "Display the table", width = "100%"), align = "right")
                                        ),
                                        column(2,
@@ -1206,7 +1236,9 @@ shinypivottablerUI <- function(id,
                                        column(4,
                                               div(actionButton(ns("reset_table"), label = "Reset table", width = "100%"), align = "left")
                                        ),
-                                       
+                                       column(2,
+                                              div(shiny::downloadButton(ns("save_config"), label = "Get initialization", width = "100%"), align = "left")
+                                       ),
                                        br(),
                                        
                                        column(12, style = "overflow-x: auto; overflow-y: auto;",       
