@@ -1,5 +1,5 @@
-[![version](http://www.r-pkg.org/badges/version/shinypivottabler)](https://CRAN.R-project.org/package=shinypivottabler)
-[![cranlogs](http://cranlogs.r-pkg.org/badges/shinypivottabler)](https://CRAN.R-project.org/package=shinypivottabler)
+[![version](https://www.r-pkg.org/badges/version/shinypivottabler)](https://CRAN.R-project.org/package=shinypivottabler)
+[![cranlogs](https://cranlogs.r-pkg.org/badges/shinypivottabler)](https://CRAN.R-project.org/package=shinypivottabler)
 [![cran checks](https://cranchecks.info/badges/worst/shinypivottabler)](https://cranchecks.info/pkgs/shinypivottabler)
 [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 
