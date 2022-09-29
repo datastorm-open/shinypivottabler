@@ -9,7 +9,6 @@ Description: Shiny Module to create, visualize, customize and export Excel-like 
 License: GPL-3 
 Encoding: UTF-8
 Depends: R (>= 3.4)
-LazyData: true
 RoxygenNote: 7.1.1
 Imports: 
     pivottabler (>= 1.5.0),
