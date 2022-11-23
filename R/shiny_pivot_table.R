@@ -764,14 +764,18 @@ shinypivottabler <- function(input, output, session,
               prefix <- ifelse(is.na(idcs[[index]]["prefix"]), "", idcs[[index]]["prefix"])
               suffix <- ifelse(is.na(idcs[[index]]["suffix"]), "", idcs[[index]]["suffix"])
 
+              nsmall <- nb_decimals
+              if ("0" %in% nb_decimals) nb_decimals <- NULL
+              
               combine <- if ("combine" %in% names(idcs[[index]])) {idcs[[index]]["combine"]} else {NULL}
               combine_target <- if ("combine_target" %in% names(idcs[[index]])) {gsub("[[:punct:]| ]", "_", idcs[[index]]["combine_target"])} else {NULL}
               combine_idc <- if ("combine_idc" %in% names(idcs[[index]])) {gsub(" ", "_", idcs[[index]][["combine_idc"]])} else {NULL}
 
+              
               pt$defineCalculation(calculationName = paste0(target, "_", tolower(idc), "_", index),
                                    caption = label,
                                    summariseExpression = get_expr(idc, target, additional_expr = c(get_additional_expr_num(), get_additional_expr_char())),
-                                   format = list("digits" = nb_decimals, "nsmall" = nb_decimals,
+                                   format = list("digits" = nb_decimals, "nsmall" = nsmall,
                                                  "decimal.mark" = sep_decimal,
                                                  "big.mark" = ifelse(sep_thousands == "None", "", sep_thousands),
                                                  scientific = F),
@@ -787,7 +791,7 @@ shinypivottabler <- function(input, output, session,
                                      basedOn = c(paste0(target, "_", tolower(idc), "_", index), paste0(combine_target, "_", tolower(combine_idc), "_combine_", index)),
                                      type = "calculation",
                                      calculationExpression = paste0("values$", paste0(target, "_", tolower(idc), "_", index), combine, "values$", paste0(combine_target, "_", tolower(combine_idc), "_combine_", index)),
-                                     format = list("digits" = nb_decimals, "nsmall" = nb_decimals,
+                                     format = list("digits" = nb_decimals, "nsmall" = nsmall,
                                                    "decimal.mark" = sep_decimal,
                                                    "big.mark" = ifelse(sep_thousands == "None", "", sep_thousands), scientific = F),
                                      cellStyleDeclarations = list("xl-value-format" = paste0(prefix, ifelse(sep_thousands == "None", "", paste0("#", sep_thousands)), "##0", ifelse(nb_decimals > 0, paste0(sep_decimal, paste0(rep(0, nb_decimals), collapse = "")), ""), suffix)))
