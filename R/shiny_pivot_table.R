@@ -40,7 +40,7 @@ get_expr <- function(idc, target, additional_expr) {
 #' @param additional_expr_num \code{named list} (list()). Additional computations to be allowed for quantitative vars.
 #' @param additional_expr_char \code{named list} (list()). Additional computations to be allowed for qualitative vars.
 #' @param additional_combine \code{named list} (list()). Additional combinations to be allowed.
-#' @param theme \code{list} (NULL). Theme to customize the output of the pivot table.
+#' @param theme \code{list} (NULL). Theme to customize the output of the pivot table. Use HEX color rather than rgb for export style
 #' @param export_styles \code{boolean} (TRUE). Whether or not to apply styles (like the theme) when exporting to Excel.
 #' @param show_title \code{boolean} (TRUE). Whether or not to display the app title.
 #' Some styles may not be supported by Excel.
@@ -137,14 +137,14 @@ get_expr <- function(idc, target, additional_expr) {
 #'   fontName="Courier New, Courier",
 #'   fontSize="1em",
 #'   headerBackgroundColor = "red",
-#'   headerColor = "rgb(255, 255, 255)",
-#'   cellBackgroundColor = "rgb(255, 255, 255)",
-#'   cellColor = "rgb(0, 0, 0)",
-#'   outlineCellBackgroundColor = "rgb(192, 192, 192)",
-#'   outlineCellColor = "rgb(0, 0, 0)",
+#'   headerColor = "#FFFFFF",
+#'   cellBackgroundColor = "#FFFFFF",
+#'   cellColor = "#000000",
+#'   outlineCellBackgroundColor = "#C0C0C0",
+#'   outlineCellColor = "#000000",
 #'   totalBackgroundColor = "#59bb28",
-#'   totalColor = "rgb(0, 0, 0)",
-#'   borderColor = "rgb(64, 64, 64)"
+#'   totalColor = "#000000",
+#'   borderColor = "#404040"
 #' )
 #'
 #' ui = shiny::fluidPage(
@@ -254,14 +254,14 @@ shinypivottabler <- function(input, output, session,
           fontName="Courier New, Courier",
           fontSize="1.2em",
           headerBackgroundColor = "#217346",
-          headerColor = "rgb(255, 255, 255)",
-          cellBackgroundColor = "rgb(255, 255, 255)",
-          cellColor = "rgb(0, 0, 0)",
-          outlineCellBackgroundColor = "rgb(192, 192, 192)",
-          outlineCellColor = "rgb(0, 0, 0)",
+          headerColor = "#FFFFFF",
+          cellBackgroundColor = "#FFFFFF",
+          cellColor = "#000000",
+          outlineCellBackgroundColor = "#C0C0C0",
+          outlineCellColor = "#000000",
           totalBackgroundColor = "#59bb28",
-          totalColor = "rgb(0, 0, 0)",
-          borderColor = "rgb(64, 64, 64)"))
+          totalColor = "#000000",
+          borderColor = "#404040"))
       } else {
         get_theme(theme)
       }
@@ -271,14 +271,14 @@ shinypivottabler <- function(input, output, session,
           fontName="Courier New, Courier",
           fontSize="1.2em",
           headerBackgroundColor = "#217346",
-          headerColor = "rgb(255, 255, 255)",
-          cellBackgroundColor = "rgb(255, 255, 255)",
-          cellColor = "rgb(0, 0, 0)",
-          outlineCellBackgroundColor = "rgb(192, 192, 192)",
-          outlineCellColor = "rgb(0, 0, 0)",
+          headerColor = "#FFFFFF",
+          cellBackgroundColor = "#FFFFFF",
+          cellColor = "#000000",
+          outlineCellBackgroundColor = "#C0C0C0",
+          outlineCellColor = "#000000",
           totalBackgroundColor = "#59bb28",
-          totalColor = "rgb(0, 0, 0)",
-          borderColor = "rgb(64, 64, 64)"))
+          totalColor = "#000000",
+          borderColor = "#404040"))
       } else {
         get_theme(theme())
       }

@@ -45,7 +45,7 @@ shinypivottablerUI(id, app_colors = c("#59bb28", "#217346"), app_linewidth = 8)
 
 \item{additional_combine}{\code{named list} (list()). Additional combinations to be allowed.}
 
-\item{theme}{\code{list} (NULL). Theme to customize the output of the pivot table.}
+\item{theme}{\code{list} (NULL). Theme to customize the output of the pivot table. Use HEX color rather than rgb for export style}
 
 \item{export_styles}{\code{boolean} (TRUE). Whether or not to apply styles (like the theme) when exporting to Excel.}
 
@@ -149,14 +149,14 @@ theme <- list(
   fontName="Courier New, Courier",
   fontSize="1em",
   headerBackgroundColor = "red",
-  headerColor = "rgb(255, 255, 255)",
-  cellBackgroundColor = "rgb(255, 255, 255)",
-  cellColor = "rgb(0, 0, 0)",
-  outlineCellBackgroundColor = "rgb(192, 192, 192)",
-  outlineCellColor = "rgb(0, 0, 0)",
+  headerColor = "#FFFFFF",
+  cellBackgroundColor = "#FFFFFF",
+  cellColor = "#000000",
+  outlineCellBackgroundColor = "#C0C0C0",
+  outlineCellColor = "#000000",
   totalBackgroundColor = "#59bb28",
-  totalColor = "rgb(0, 0, 0)",
-  borderColor = "rgb(64, 64, 64)"
+  totalColor = "#000000",
+  borderColor = "#404040"
 )
 
 ui = shiny::fluidPage(

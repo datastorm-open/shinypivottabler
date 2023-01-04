@@ -1,6 +1,6 @@
 Package: shinypivottabler
 Title: Shiny Module to Create Pivot Tables
-Version: 1.1
+Version: 1.2
 Authors@R: c(
     person("Benoit", "Thieurmel", email = "bthieurmel@gmail.com", role = c("aut", "cre")),
     person("Thibaut", "Dubois", email = "thibaut.dubois@datastorm.fr", role = c("aut"))
@@ -9,7 +9,7 @@ Description: Shiny Module to create, visualize, customize and export Excel-like 
 License: GPL-3 
 Encoding: UTF-8
 Depends: R (>= 3.4)
-RoxygenNote: 7.1.1
+RoxygenNote: 7.2.1
 Imports: 
     pivottabler (>= 1.5.0),
     shiny,

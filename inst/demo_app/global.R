@@ -23,13 +23,13 @@ theme <- list(
   fontName="arial",
   fontSize="1em",
   headerBackgroundColor = "#430838",
-  headerColor = "rgb(255, 255, 255)",
-  cellBackgroundColor = "rgb(255, 255, 255)",
-  cellColor = "rgb(0, 0, 0)",
-  outlineCellBackgroundColor = "rgb(192, 192, 192)",
-  outlineCellColor = "rgb(0, 0, 0)",
+  headerColor = "#FFFFFF",
+  cellBackgroundColor = "#FFFFFF",
+  cellColor = "#000000",
+  outlineCellBackgroundColor = "#C0C0C0",
+  outlineCellColor = "#000000",
   totalBackgroundColor = "#e6e6e6",
-  totalColor = "rgb(0, 0, 0)",
+  totalColor = "#000000",
   borderColor = "#000000"
 )
 
